@@ -1,5 +1,7 @@
 # sv_pathlib
 
+[中文文档](README_zh.md)
+
 A Python [pathlib](https://docs.python.org/3/library/pathlib.html)-inspired path library for SystemVerilog, providing file checks, directory operations, file I/O, and path parsing with a clean static-method interface.
 
 ## Features

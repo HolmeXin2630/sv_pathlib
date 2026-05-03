@@ -1,5 +1,7 @@
 # sv_pathlib
 
+[English](README.md)
+
 仿照 Python [pathlib](https://docs.python.org/3/library/pathlib.html) 的 SystemVerilog 路径操作库，提供文件判断、目录操作、文件读写和路径解析功能，采用简洁的静态方法接口。
 
 ## 功能特性
