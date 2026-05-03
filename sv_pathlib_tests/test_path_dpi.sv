@@ -39,19 +39,19 @@ module test_path_dpi;
     check("exists - file", path_dpi::exists(test_file));
     check("exists - no", !path_dpi::exists("/tmp/nonexistent_xyz"));
 
-    // Test is_dir / is_file
-    check("is_dir", path_dpi::is_dir(test_dir));
-    check("is_file", path_dpi::is_file(test_file));
+    // Test isDir / isFile
+    check("isDir", path_dpi::isDir(test_dir));
+    check("isFile", path_dpi::isFile(test_file));
 
-    // Test is_symlink
+    // Test isSymlink
     void'(path_dpi::symlink(test_file, symlink_file));
-    check("is_symlink - yes", path_dpi::is_symlink(symlink_file));
-    check("is_symlink - no for file", !path_dpi::is_symlink(test_file));
+    check("isSymlink - yes", path_dpi::isSymlink(symlink_file));
+    check("isSymlink - no for file", !path_dpi::isSymlink(test_file));
 
-    // Test is_empty
-    check("is_empty - yes", path_dpi::is_empty(empty_file));
-    check("is_empty - no for non-empty", !path_dpi::is_empty(test_file));
-    check("is_empty - no for dir", !path_dpi::is_empty(test_dir));
+    // Test isEmpty
+    check("isEmpty - yes", path_dpi::isEmpty(empty_file));
+    check("isEmpty - no for non-empty", !path_dpi::isEmpty(test_file));
+    check("isEmpty - no for dir", !path_dpi::isEmpty(test_dir));
 
     // Test size
     check("size > 0", path_dpi::size(test_file) > 0);
@@ -83,7 +83,7 @@ module test_path_dpi;
 
     // Test mkdir with nested paths
     void'(path_dpi::mkdir(nested_dir));
-    check("mkdir - nested path created", path_dpi::is_dir(nested_dir));
+    check("mkdir - nested path created", path_dpi::isDir(nested_dir));
 
     // Cleanup
     path_dpi::unlink(symlink_file);

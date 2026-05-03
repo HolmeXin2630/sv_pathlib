@@ -21,7 +21,7 @@ module test_dir_ops_sys;
     // Test mkdir
     check("mkdir - create", path_sys::mkdir(test_dir) == 0, 1);
     check("mkdir - exists after", path_sys::exists(test_dir), 1);
-    check("mkdir - is_dir after", path_sys::is_dir(test_dir), 1);
+    check("mkdir - isDir after", path_sys::isDir(test_dir), 1);
 
     // Test mkdir idempotency (-p flag, should succeed on existing dir)
     check("mkdir - idempotent (already exists)", path_sys::mkdir(test_dir) == 0, 1);

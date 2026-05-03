@@ -7,45 +7,45 @@ package path_sys;
   import "DPI-C" function longint c_file_mtime(input string path);
 
   // Error handling
-  string last_error_msg = "";
-  int last_error_code = 0;
+  string lastErrorMsg = "";
+  int lastErrorCode = 0;
 
-  function void clear_error();
-    last_error_msg = "";
-    last_error_code = 0;
+  function void clearError();
+    lastErrorMsg = "";
+    lastErrorCode = 0;
   endfunction
 
-  function string get_last_error();
-    return last_error_msg;
+  function string getLastError();
+    return lastErrorMsg;
   endfunction
 
-  function int get_last_error_code();
-    return last_error_code;
+  function int getLastErrorCode();
+    return lastErrorCode;
   endfunction
 
-  function void set_error(int code, string msg);
-    last_error_code = code;
-    last_error_msg = msg;
+  function void setError(int code, string msg);
+    lastErrorCode = code;
+    lastErrorMsg = msg;
   endfunction
 
   function bit exists(string path);
     return c_system($sformatf("test -e %s", path)) == 0;
   endfunction
 
-  function bit is_file(string path);
+  function bit isFile(string path);
     return c_system($sformatf("test -f %s", path)) == 0;
   endfunction
 
-  function bit is_dir(string path);
+  function bit isDir(string path);
     return c_system($sformatf("test -d %s", path)) == 0;
   endfunction
 
-  function bit is_symlink(string path);
+  function bit isSymlink(string path);
     return c_system($sformatf("test -L %s", path)) == 0;
   endfunction
 
-  function bit is_empty(string path);
-    if (!is_file(path)) return 0;
+  function bit isEmpty(string path);
+    if (!isFile(path)) return 0;
     return c_system($sformatf("test -s %s", path)) != 0;
   endfunction
 
@@ -57,32 +57,32 @@ package path_sys;
     return c_system($sformatf("rmdir %s", path));
   endfunction
 
-  function void write_text(string path, string content);
+  function void writeText(string path, string content);
     c_write_text(path, content);
   endfunction
 
-  function string read_text(string path);
+  function string readText(string path);
     int fh;
     string content = "";
     string line;
-    int fgets_result;
+    int fgetsResult;
 
-    clear_error();
+    clearError();
 
     if (!exists(path)) begin
-      set_error(-1, $sformatf("File not found: %s", path));
+      setError(-1, $sformatf("File not found: %s", path));
       return "";
     end
 
     fh = $fopen(path, "r");
     if (fh == 0) begin
-      set_error(-2, $sformatf("Cannot open file: %s", path));
+      setError(-2, $sformatf("Cannot open file: %s", path));
       return "";
     end
 
     while (!$feof(fh)) begin
-      fgets_result = $fgets(line, fh);
-      if (fgets_result != 0) begin
+      fgetsResult = $fgets(line, fh);
+      if (fgetsResult != 0) begin
         content = {content, line};
       end
     end
@@ -98,16 +98,16 @@ package path_sys;
   endfunction
 
   function void copy(string src, string dst);
-    clear_error();
+    clearError();
     if (!exists(src)) begin
-      set_error(-1, $sformatf("Source file not found: %s", src));
+      setError(-1, $sformatf("Source file not found: %s", src));
       return;
     end
     void'(c_system($sformatf("cp %s %s", src, dst)));
   endfunction
 
-  function void rename(string old_path, string new_path);
-    void'(c_system($sformatf("mv %s %s", old_path, new_path)));
+  function void rename(string oldPath, string newPath);
+    void'(c_system($sformatf("mv %s %s", oldPath, newPath)));
   endfunction
 
   function longint size(string path);

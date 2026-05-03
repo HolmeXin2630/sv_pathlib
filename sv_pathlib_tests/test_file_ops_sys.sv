@@ -30,12 +30,12 @@ module test_file_ops_sys;
     string renamed = "/tmp/sv_pathlib_ops_renamed.txt";
 
     // Create source file
-    path_sys::write_text(src, "test content for ops");
+    path_sys::writeText(src, "test content for ops");
 
     // Test copy
     path_sys::copy(src, dst);
     check("copy - dest exists", path_sys::exists(dst));
-    check_str("copy - content matches", path_sys::read_text(dst), "test content for ops");
+    check_str("copy - content matches", path_sys::readText(dst), "test content for ops");
 
     // Test rename
     path_sys::rename(dst, renamed);

@@ -19,17 +19,17 @@ module test_file_io_sys;
     string content = "Hello, sv_pathlib!";
     string read_content;
 
-    // Test write_text
-    path_sys::write_text(test_file, content);
-    check("write_text - file exists", path_sys::exists(test_file), 1);
+    // Test writeText
+    path_sys::writeText(test_file, content);
+    check("writeText - file exists", path_sys::exists(test_file), 1);
 
-    // Test read_text
-    read_content = path_sys::read_text(test_file);
-    check("read_text - content matches", read_content, content);
+    // Test readText
+    read_content = path_sys::readText(test_file);
+    check("readText - content matches", read_content, content);
 
-    // Test read_text - nonexistent file
-    read_content = path_sys::read_text("/tmp/nonexistent_xyz.txt");
-    check("read_text - nonexistent returns empty", read_content, "");
+    // Test readText - nonexistent file
+    read_content = path_sys::readText("/tmp/nonexistent_xyz.txt");
+    check("readText - nonexistent returns empty", read_content, "");
 
     // Cleanup
     path_sys::unlink(test_file);
