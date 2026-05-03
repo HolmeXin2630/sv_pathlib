@@ -19,23 +19,23 @@ module test_error_sys;
     string test_file = "/tmp/test_read_existing.txt";
     string test_content = "hello world\nline two";
 
-    // Test readText on existing file
-    path_sys::writeText(test_file, test_content);
-    content = path_sys::readText(test_file);
-    check("readText existing - returns content", content == test_content);
-    check("readText existing - no error", path_sys::getLastErrorCode() == 0);
+    // Test read_text on existing file
+    path_sys::write_text(test_file, test_content);
+    content = path_sys::read_text(test_file);
+    check("read_text existing - returns content", content == test_content);
+    check("read_text existing - no error", path_sys::get_last_error_code() == 0);
     path_sys::unlink(test_file);
 
-    // Test readText on nonexistent file
-    path_sys::clearError();
-    content = path_sys::readText("/tmp/nonexistent_xyz.txt");
-    check("readText nonexistent - returns empty", content == "");
-    check("readText nonexistent - error set", path_sys::getLastErrorCode() != 0);
+    // Test read_text on nonexistent file
+    path_sys::clear_error();
+    content = path_sys::read_text("/tmp/nonexistent_xyz.txt");
+    check("read_text nonexistent - returns empty", content == "");
+    check("read_text nonexistent - error set", path_sys::get_last_error_code() != 0);
 
     // Test copy nonexistent file
-    path_sys::clearError();
+    path_sys::clear_error();
     path_sys::copy("/tmp/nonexistent_xyz.txt", "/tmp/dest.txt");
-    check("copy nonexistent - error set", path_sys::getLastErrorCode() != 0);
+    check("copy nonexistent - error set", path_sys::get_last_error_code() != 0);
 
     $display("\nError handling tests: %0d passed, %0d failed", pass_count, fail_count);
     if (fail_count > 0) $finish(1);

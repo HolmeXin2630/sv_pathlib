@@ -18,19 +18,19 @@ package path_dpi;
     return sv_pathlib_exists(path) != 0;
   endfunction
 
-  function bit isFile(string path);
+  function bit is_file(string path);
     return sv_pathlib_is_file(path) != 0;
   endfunction
 
-  function bit isDir(string path);
+  function bit is_dir(string path);
     return sv_pathlib_is_dir(path) != 0;
   endfunction
 
-  function bit isSymlink(string path);
+  function bit is_symlink(string path);
     return sv_pathlib_is_symlink(path) != 0;
   endfunction
 
-  function bit isEmpty(string path);
+  function bit is_empty(string path);
     return sv_pathlib_is_empty(path) != 0;
   endfunction
 
@@ -54,8 +54,8 @@ package path_dpi;
     sv_pathlib_copy(src, dst);
   endfunction
 
-  function void rename(string oldPath, string newPath);
-    sv_pathlib_rename(oldPath, newPath);
+  function void rename(string old_path, string new_path);
+    sv_pathlib_rename(old_path, new_path);
   endfunction
 
   function void unlink(string path);

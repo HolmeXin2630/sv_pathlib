@@ -34,22 +34,22 @@ module test_path_check_sys;
     check("exists - /tmp", path_sys::exists("/tmp"), 1);
     check("exists - nonexistent", path_sys::exists("/tmp/nonexistent_xyz"), 0);
 
-    // Test isDir()
-    check("isDir - /tmp", path_sys::isDir("/tmp"), 1);
-    check("isDir - file", path_sys::isDir("/tmp/sv_pathlib_test/test.txt"), 0);
+    // Test is_dir()
+    check("is_dir - /tmp", path_sys::is_dir("/tmp"), 1);
+    check("is_dir - file", path_sys::is_dir("/tmp/sv_pathlib_test/test.txt"), 0);
 
-    // Test isFile()
-    check("isFile - file", path_sys::isFile("/tmp/sv_pathlib_test/test.txt"), 1);
-    check("isFile - dir", path_sys::isFile("/tmp/sv_pathlib_test"), 0);
+    // Test is_file()
+    check("is_file - file", path_sys::is_file("/tmp/sv_pathlib_test/test.txt"), 1);
+    check("is_file - dir", path_sys::is_file("/tmp/sv_pathlib_test"), 0);
 
-    // Test isEmpty()
-    check("isEmpty - empty file", path_sys::isEmpty("/tmp/sv_pathlib_test/empty.txt"), 1);
-    check("isEmpty - non-empty file", path_sys::isEmpty("/tmp/sv_pathlib_test/test.txt"), 0);
+    // Test is_empty()
+    check("is_empty - empty file", path_sys::is_empty("/tmp/sv_pathlib_test/empty.txt"), 1);
+    check("is_empty - non-empty file", path_sys::is_empty("/tmp/sv_pathlib_test/test.txt"), 0);
 
-    // Test isSymlink()
+    // Test is_symlink()
     void'(c_system("ln -s /tmp/sv_pathlib_test/test.txt /tmp/sv_pathlib_test/link.txt"));
-    check("isSymlink - symlink", path_sys::isSymlink("/tmp/sv_pathlib_test/link.txt"), 1);
-    check("isSymlink - regular file", path_sys::isSymlink("/tmp/sv_pathlib_test/test.txt"), 0);
+    check("is_symlink - symlink", path_sys::is_symlink("/tmp/sv_pathlib_test/link.txt"), 1);
+    check("is_symlink - regular file", path_sys::is_symlink("/tmp/sv_pathlib_test/test.txt"), 0);
 
     // Test rmdir()
     void'(path_sys::mkdir("/tmp/sv_pathlib_test/rmdir_test"));

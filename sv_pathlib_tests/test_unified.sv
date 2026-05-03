@@ -29,11 +29,11 @@ module test_unified;
     // Test Path class (static methods)
     check("Path::name", Path::name("/tmp/test.txt"), "test.txt");
     check("Path::parent", Path::parent("/tmp/test.txt"), "/tmp");
-    check("Path::joinPath", Path::joinPath("/tmp", "test.txt"), "/tmp/test.txt");
+    check("Path::join", Path::join_path("/tmp", "test.txt"), "/tmp/test.txt");
 
     // Test path_sys (file operations)
-    path_sys::writeText("/tmp/unified_test.txt", "unified content");
-    check("path_sys::readText", path_sys::readText("/tmp/unified_test.txt"), "unified content");
+    path_sys::write_text("/tmp/unified_test.txt", "unified content");
+    check("path_sys::read_text", path_sys::read_text("/tmp/unified_test.txt"), "unified content");
     check_bit("path_sys::exists", path_sys::exists("/tmp/unified_test.txt"), 1);
 
     // Cleanup

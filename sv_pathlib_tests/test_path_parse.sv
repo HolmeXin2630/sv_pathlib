@@ -42,23 +42,23 @@ module test_path_parse;
     check("parent - /tmp/file.txt", Path::parent("/tmp/file.txt"), "/tmp");
     check("parent - /a/b/c/file", Path::parent("/a/b/c/file"), "/a/b/c");
 
-    // Test joinPath()
-    check("joinPath - base + rel", Path::joinPath("/tmp", "file.txt"), "/tmp/file.txt");
-    check("joinPath - base + abs", Path::joinPath("/tmp", "/abs/file.txt"), "/abs/file.txt");
-    check("joinPath - trailing slash", Path::joinPath("/tmp/", "file.txt"), "/tmp/file.txt");
+    // Test join()
+    check("join_path - base + rel", Path::join_path("/tmp", "file.txt"), "/tmp/file.txt");
+    check("join_path - base + abs", Path::join_path("/tmp", "/abs/file.txt"), "/abs/file.txt");
+    check("join_path - trailing slash", Path::join_path("/tmp/", "file.txt"), "/tmp/file.txt");
 
-    // Test withName()
-    check("withName - /tmp/old.txt", Path::withName("/tmp/old.txt", "new.txt"), "/tmp/new.txt");
-    check("withName - /a/b/c.sv", Path::withName("/a/b/c.sv", "d.sv"), "/a/b/d.sv");
+    // Test with_name()
+    check("with_name - /tmp/old.txt", Path::with_name("/tmp/old.txt", "new.txt"), "/tmp/new.txt");
+    check("with_name - /a/b/c.sv", Path::with_name("/a/b/c.sv", "d.sv"), "/a/b/d.sv");
 
-    // Test withSuffix()
-    check("withSuffix - .txt to .sv", Path::withSuffix("/tmp/file.txt", ".sv"), "/tmp/file.sv");
-    check("withSuffix - no ext", Path::withSuffix("/tmp/file", ".txt"), "/tmp/file.txt");
+    // Test with_suffix()
+    check("with_suffix - .txt to .sv", Path::with_suffix("/tmp/file.txt", ".sv"), "/tmp/file.sv");
+    check("with_suffix - no ext", Path::with_suffix("/tmp/file", ".txt"), "/tmp/file.txt");
 
-    // Test isAbsolute()
-    check_bit("isAbsolute - /tmp", Path::isAbsolute("/tmp"), 1);
-    check_bit("isAbsolute - tmp", Path::isAbsolute("tmp"), 0);
-    check_bit("isAbsolute - relative", Path::isAbsolute("a/b/c"), 0);
+    // Test is_absolute()
+    check_bit("is_absolute - /tmp", Path::is_absolute("/tmp"), 1);
+    check_bit("is_absolute - tmp", Path::is_absolute("tmp"), 0);
+    check_bit("is_absolute - relative", Path::is_absolute("a/b/c"), 0);
 
     $display("\nPath parsing tests: %0d passed, %0d failed", pass_count, fail_count);
     if (fail_count > 0) $finish(1);
