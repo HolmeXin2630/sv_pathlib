@@ -12,7 +12,7 @@ A Python [pathlib](https://docs.python.org/3/library/pathlib.html)-inspired path
 - **Directory ops** — `mkdir()`, `rmdir()`
 - **File I/O** — `read_text()`, `write_text()`, `copy()`, `rename()`, `unlink()`
 - **File stats** — `size()`, `modified()`
-- **Error handling** — `get_last_error()`, `get_last_error_code()`, `clear_error()`
+- **Error handling** — `$warning()` reports errors without global state (fork/join safe)
 - **Three backends** — VCS (zero-dependency), $system (simple integration), DPI-C (high performance)
 
 ## Project Structure
@@ -99,6 +99,8 @@ endmodule
 
 ### Error Handling
 
+Errors are reported via `$warning()` — no global state, safe for fork/join concurrency.
+
 ```systemverilog
 import sv_pathlib_sys_pkg::*;
 
@@ -107,19 +109,12 @@ module example_error;
     string content;
 
     // Try to read a nonexistent file
+    // $warning prints: "sv_pathlib: file not found: /tmp/nonexistent.txt"
     content = Path::read_text("/tmp/nonexistent.txt");
-    if (Path::get_last_error_code() != 0) begin
-      $display("Error: %s", Path::get_last_error());
-    end
-
-    // Clear error state before next operation
-    Path::clear_error();
 
     // Try to copy a nonexistent source
+    // $warning prints: "sv_pathlib: source file not found: /tmp/no_such_file.txt"
     Path::copy("/tmp/no_such_file.txt", "/tmp/dest.txt");
-    if (Path::get_last_error_code() != 0) begin
-      $display("Error: %s", Path::get_last_error());
-    end
   end
 endmodule
 ```
@@ -164,7 +159,7 @@ endmodule
 | Performance | Lower (shell calls) | Lower (shell calls) | Higher (direct POSIX) |
 | Platform | Linux | Linux | Linux / Unix |
 | Symbolic links | Not supported | Not supported | `symlink()` supported |
-| Error handling | Supported | Supported | Not supported |
+| Error handling | $warning | $warning | Not supported |
 | Dependency | None | C file | C++ compiler |
 | VCS compatible | Yes | Yes (needs DPI compile) | Yes (needs DPI compile) |
 
@@ -234,8 +229,8 @@ All methods are static — call via `Path::method_name()`.
 | `is_dir` | `static bit is_dir(string path)` | Check if path is a directory |
 | `is_symlink` | `static bit is_symlink(string path)` | Check if path is a symlink |
 | `is_empty` | `static bit is_empty(string path)` | Check if file is empty |
-| `mkdir` | `static int mkdir(string path)` | Create directory (recursive with `-p`) |
-| `rmdir` | `static int rmdir(string path)` | Remove empty directory |
+| `mkdir` | `static int mkdir(string path)` | Create directory (recursive with `-p`), returns 0 on success |
+| `rmdir` | `static int rmdir(string path)` | Remove empty directory, returns 0 on success |
 | `read_text` | `static string read_text(string path)` | Read file as string |
 | `write_text` | `static void write_text(string path, string content)` | Write string to file |
 | `copy` | `static void copy(string src, string dst)` | Copy file |
@@ -244,14 +239,6 @@ All methods are static — call via `Path::method_name()`.
 | `size` | `static longint size(string path)` | Get file size in bytes (-1 if not found) |
 | `modified` | `static longint modified(string path)` | Get last modification time (unix timestamp) |
 | `symlink` | `static int symlink(string target, string linkpath)` | Create symbolic link (DPI only) |
-
-#### Error Handling
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `get_last_error` | `static string get_last_error()` | Get last error message |
-| `get_last_error_code` | `static int get_last_error_code()` | Get last error code (0 = OK) |
-| `clear_error` | `static void clear_error()` | Clear error state |
 
 ## Integration
 

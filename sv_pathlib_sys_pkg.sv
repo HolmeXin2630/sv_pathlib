@@ -7,28 +7,6 @@ package sv_pathlib_sys_pkg;
   import "DPI-C" function longint c_file_mtime(input string path);
 
   class Path;
-    // Error handling (package-level state)
-    static string last_error_msg = "";
-    static int last_error_code = 0;
-
-    static function void clear_error();
-      last_error_msg = "";
-      last_error_code = 0;
-    endfunction
-
-    static function string get_last_error();
-      return last_error_msg;
-    endfunction
-
-    static function int get_last_error_code();
-      return last_error_code;
-    endfunction
-
-    static function void set_error(int code, string msg);
-      last_error_code = code;
-      last_error_msg = msg;
-    endfunction
-
     // Path parsing
     static function string name(string path);
       int last_slash = -1;
@@ -145,11 +123,15 @@ package sv_pathlib_sys_pkg;
 
     // Directory operations
     static function int mkdir(string path);
-      return c_system($sformatf("mkdir -p %s", path));
+      int rc = c_system($sformatf("mkdir -p %s", path));
+      if (rc != 0) $warning("sv_pathlib: mkdir failed: %s", path);
+      return rc;
     endfunction
 
     static function int rmdir(string path);
-      return c_system($sformatf("rmdir %s", path));
+      int rc = c_system($sformatf("rmdir %s", path));
+      if (rc != 0) $warning("sv_pathlib: rmdir failed: %s", path);
+      return rc;
     endfunction
 
     // File I/O
@@ -159,16 +141,14 @@ package sv_pathlib_sys_pkg;
       string line;
       int fgets_result;
 
-      clear_error();
-
       if (!exists(path)) begin
-        set_error(-1, $sformatf("File not found: %s", path));
+        $warning("sv_pathlib: file not found: %s", path);
         return "";
       end
 
       fh = $fopen(path, "r");
       if (fh == 0) begin
-        set_error(-2, $sformatf("Cannot open file: %s", path));
+        $warning("sv_pathlib: cannot open file: %s", path);
         return "";
       end
 
@@ -184,20 +164,28 @@ package sv_pathlib_sys_pkg;
     endfunction
 
     static function void write_text(string path, string content);
-      c_write_text(path, content);
+      int fh = $fopen(path, "w");
+      if (fh == 0) begin
+        $warning("sv_pathlib: cannot open file for writing: %s", path);
+        return;
+      end
+      $fwrite(fh, "%s", content);
+      $fclose(fh);
     endfunction
 
     static function void copy(string src, string dst);
-      clear_error();
+      int rc;
       if (!exists(src)) begin
-        set_error(-1, $sformatf("Source file not found: %s", src));
+        $warning("sv_pathlib: source file not found: %s", src);
         return;
       end
-      void'(c_system($sformatf("cp %s %s", src, dst)));
+      rc = c_system($sformatf("cp %s %s", src, dst));
+      if (rc != 0) $warning("sv_pathlib: copy failed: %s -> %s", src, dst);
     endfunction
 
     static function void rename(string old_path, string new_path);
-      void'(c_system($sformatf("mv %s %s", old_path, new_path)));
+      int rc = c_system($sformatf("mv %s %s", old_path, new_path));
+      if (rc != 0) $warning("sv_pathlib: rename failed: %s -> %s", old_path, new_path);
     endfunction
 
     static function void unlink(string path);

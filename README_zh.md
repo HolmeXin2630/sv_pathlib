@@ -12,7 +12,7 @@
 - **目录操作** — `mkdir()`、`rmdir()`
 - **文件读写** — `read_text()`、`write_text()`、`copy()`、`rename()`、`unlink()`
 - **文件信息** — `size()`、`modified()`
-- **错误处理** — `get_last_error()`、`get_last_error_code()`、`clear_error()`
+- **错误处理** — 使用 `$warning()` 报告错误，无全局状态，fork/join 并发安全
 - **三种后端** — VCS（零依赖）、$system（集成简单）、DPI-C（高性能）
 
 ## 目录结构
@@ -99,6 +99,8 @@ endmodule
 
 ### 错误处理
 
+错误通过 `$warning()` 报告——无全局状态，fork/join 并发安全。
+
 ```systemverilog
 import sv_pathlib_sys_pkg::*;
 
@@ -107,19 +109,12 @@ module example_error;
     string content;
 
     // 尝试读取不存在的文件
+    // $warning 打印: "sv_pathlib: file not found: /tmp/nonexistent.txt"
     content = Path::read_text("/tmp/nonexistent.txt");
-    if (Path::get_last_error_code() != 0) begin
-      $display("错误: %s", Path::get_last_error());
-    end
-
-    // 清除错误状态后再执行下一个操作
-    Path::clear_error();
 
     // 尝试复制不存在的源文件
+    // $warning 打印: "sv_pathlib: source file not found: /tmp/no_such_file.txt"
     Path::copy("/tmp/no_such_file.txt", "/tmp/dest.txt");
-    if (Path::get_last_error_code() != 0) begin
-      $display("错误: %s", Path::get_last_error());
-    end
   end
 endmodule
 ```
@@ -164,7 +159,7 @@ endmodule
 | 性能 | 较低（shell 调用） | 较低（shell 调用） | 较高（直接 POSIX 调用） |
 | 平台 | Linux | Linux | Linux / Unix |
 | 符号链接 | 不支持 | 不支持 | 支持 `symlink()` |
-| 错误处理 | 支持 | 支持 | 不支持 |
+| 错误处理 | $warning | $warning | 不支持 |
 | 依赖 | 无 | C 文件 | C++ 编译器 |
 | VCS 兼容 | 是 | 是（需 DPI 编译） | 是（需 DPI 编译） |
 
@@ -234,8 +229,8 @@ make clean
 | `is_dir` | `static bit is_dir(string path)` | 判断是否为目录 |
 | `is_symlink` | `static bit is_symlink(string path)` | 判断是否为符号链接 |
 | `is_empty` | `static bit is_empty(string path)` | 判断文件是否为空 |
-| `mkdir` | `static int mkdir(string path)` | 创建目录（递归，相当于 `mkdir -p`） |
-| `rmdir` | `static int rmdir(string path)` | 删除空目录 |
+| `mkdir` | `static int mkdir(string path)` | 创建目录（递归），返回 0 表示成功 |
+| `rmdir` | `static int rmdir(string path)` | 删除空目录，返回 0 表示成功 |
 | `read_text` | `static string read_text(string path)` | 读取文件内容为字符串 |
 | `write_text` | `static void write_text(string path, string content)` | 将字符串写入文件 |
 | `copy` | `static void copy(string src, string dst)` | 复制文件 |
@@ -244,14 +239,6 @@ make clean
 | `size` | `static longint size(string path)` | 获取文件大小（字节），不存在返回 -1 |
 | `modified` | `static longint modified(string path)` | 获取最后修改时间（unix 时间戳） |
 | `symlink` | `static int symlink(string target, string linkpath)` | 创建符号链接（仅 DPI） |
-
-#### 错误处理
-
-| 方法 | 签名 | 说明 |
-|------|------|------|
-| `get_last_error` | `static string get_last_error()` | 获取最后的错误信息 |
-| `get_last_error_code` | `static int get_last_error_code()` | 获取最后的错误码（0 = 成功） |
-| `clear_error` | `static void clear_error()` | 清除错误状态 |
 
 ## 集成方式
 
