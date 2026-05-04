@@ -1,4 +1,4 @@
-import path_sys::*;
+import sv_pathlib_sys_pkg::*;
 
 module test_dir_ops_sys;
   int pass_count = 0;
@@ -19,28 +19,28 @@ module test_dir_ops_sys;
     int fh;
 
     // Test mkdir
-    check("mkdir - create", path_sys::mkdir(test_dir) == 0, 1);
-    check("mkdir - exists after", path_sys::exists(test_dir), 1);
-    check("mkdir - is_dir after", path_sys::is_dir(test_dir), 1);
+    check("mkdir - create", Path::mkdir(test_dir) == 0, 1);
+    check("mkdir - exists after", Path::exists(test_dir), 1);
+    check("mkdir - is_dir after", Path::is_dir(test_dir), 1);
 
     // Test mkdir idempotency (-p flag, should succeed on existing dir)
-    check("mkdir - idempotent (already exists)", path_sys::mkdir(test_dir) == 0, 1);
+    check("mkdir - idempotent (already exists)", Path::mkdir(test_dir) == 0, 1);
 
     // Test rmdir on non-existent directory
-    check("rmdir - non-existent dir", path_sys::rmdir("/tmp/sv_pathlib_nonexistent_xyz") == 0, 0);
+    check("rmdir - non-existent dir", Path::rmdir("/tmp/sv_pathlib_nonexistent_xyz") == 0, 0);
 
     // Test rmdir on non-empty directory (should fail)
     fh = $fopen({test_dir, "/dummy.txt"}, "w");
     $fwrite(fh, "test");
     $fclose(fh);
-    check("rmdir - non-empty dir fails", path_sys::rmdir(test_dir) == 0, 0);
+    check("rmdir - non-empty dir fails", Path::rmdir(test_dir) == 0, 0);
 
     // Clean up the file so rmdir can succeed
     void'(c_system($sformatf("rm -f %s/dummy.txt", test_dir)));
 
     // Test rmdir
-    check("rmdir - remove", path_sys::rmdir(test_dir) == 0, 1);
-    check("rmdir - not exists after", path_sys::exists(test_dir), 0);
+    check("rmdir - remove", Path::rmdir(test_dir) == 0, 1);
+    check("rmdir - not exists after", Path::exists(test_dir), 0);
 
     // Cleanup: ensure test directory is removed
     void'(c_system($sformatf("rm -rf %s", test_dir)));

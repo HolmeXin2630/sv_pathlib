@@ -16,9 +16,10 @@ test_hello:
 
 test_skeleton:
 	$(VERILATOR) $(VERILATOR_FLAGS) \
-		sv_pathlib_pkg.sv path.sv \
+		sv_pathlib_sys_pkg.sv \
 		sv_pathlib_tests/test_path_skeleton.sv \
 		sv_pathlib_tests/main_skeleton.cpp \
+		sv_pathlib_dpi/dpi_system.c \
 		--top-module test_path_skeleton \
 		--Mdir obj_dir_skeleton \
 		-o test_skeleton
@@ -26,9 +27,10 @@ test_skeleton:
 
 test_path_parse:
 	$(VERILATOR) $(VERILATOR_FLAGS) \
-		sv_pathlib_pkg.sv path.sv \
+		sv_pathlib_sys_pkg.sv \
 		sv_pathlib_tests/test_path_parse.sv \
 		sv_pathlib_tests/main_path_parse.cpp \
+		sv_pathlib_dpi/dpi_system.c \
 		--top-module test_path_parse \
 		--Mdir obj_dir_path_parse \
 		-o test_path_parse
@@ -36,8 +38,7 @@ test_path_parse:
 
 test_path_check_sys:
 	$(VERILATOR) $(VERILATOR_FLAGS) \
-		sv_pathlib_pkg.sv path.sv \
-		sv_pathlib_sys/path_sys.sv \
+		sv_pathlib_sys_pkg.sv \
 		sv_pathlib_tests/test_path_check_sys.sv \
 		sv_pathlib_tests/main_path_check_sys.cpp \
 		sv_pathlib_dpi/dpi_system.c \
@@ -48,7 +49,7 @@ test_path_check_sys:
 
 test_dir_ops_sys:
 	$(VERILATOR) $(VERILATOR_FLAGS) \
-		sv_pathlib_sys/path_sys.sv \
+		sv_pathlib_sys_pkg.sv \
 		sv_pathlib_tests/test_dir_ops_sys.sv \
 		sv_pathlib_tests/main_dir_ops_sys.cpp \
 		sv_pathlib_dpi/dpi_system.c \
@@ -59,7 +60,7 @@ test_dir_ops_sys:
 
 test_file_io_sys:
 	$(VERILATOR) $(VERILATOR_FLAGS) \
-		sv_pathlib_sys/path_sys.sv \
+		sv_pathlib_sys_pkg.sv \
 		sv_pathlib_tests/test_file_io_sys.sv \
 		sv_pathlib_tests/main_file_io_sys.cpp \
 		sv_pathlib_dpi/dpi_system.c \
@@ -70,7 +71,7 @@ test_file_io_sys:
 
 test_file_ops_sys:
 	$(VERILATOR) $(VERILATOR_FLAGS) \
-		sv_pathlib_sys/path_sys.sv \
+		sv_pathlib_sys_pkg.sv \
 		sv_pathlib_tests/test_file_ops_sys.sv \
 		sv_pathlib_tests/main_file_ops_sys.cpp \
 		sv_pathlib_dpi/dpi_system.c \
@@ -81,7 +82,7 @@ test_file_ops_sys:
 
 test_error_sys:
 	$(VERILATOR) $(VERILATOR_FLAGS) \
-		sv_pathlib_sys/path_sys.sv \
+		sv_pathlib_sys_pkg.sv \
 		sv_pathlib_tests/test_error_sys.sv \
 		sv_pathlib_tests/main_error_sys.cpp \
 		sv_pathlib_dpi/dpi_system.c \
@@ -92,7 +93,7 @@ test_error_sys:
 
 test_path_dpi:
 	$(VERILATOR) $(VERILATOR_FLAGS) \
-		sv_pathlib_dpi/path_dpi.sv \
+		sv_pathlib_dpi_pkg.sv \
 		sv_pathlib_tests/test_path_dpi.sv \
 		sv_pathlib_tests/main_path_dpi.cpp \
 		sv_pathlib_dpi/path_dpi_impl.cc \
@@ -103,8 +104,7 @@ test_path_dpi:
 
 test_unified:
 	$(VERILATOR) $(VERILATOR_FLAGS) \
-		sv_pathlib_pkg.sv path.sv \
-		sv_pathlib_sys/path_sys.sv \
+		sv_pathlib_sys_pkg.sv \
 		sv_pathlib_tests/test_unified.sv \
 		sv_pathlib_tests/main_unified.cpp \
 		sv_pathlib_dpi/dpi_system.c \

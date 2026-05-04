@@ -6,6 +6,7 @@ A Python [pathlib](https://docs.python.org/3/library/pathlib.html)-inspired path
 
 ## Features
 
+- **Unified API** — All operations via `Path::` static methods, backend-transparent
 - **Path parsing** — `name()`, `stem()`, `extension()`, `parent()`, `join_path()`, `with_name()`, `with_suffix()`, `is_absolute()`
 - **File checks** — `exists()`, `is_file()`, `is_dir()`, `is_symlink()`, `is_empty()`
 - **Directory ops** — `mkdir()`, `rmdir()`
@@ -18,27 +19,35 @@ A Python [pathlib](https://docs.python.org/3/library/pathlib.html)-inspired path
 
 ```
 sv_pathlib/
-  sv_pathlib_pkg.sv            -- Package (includes Path class)
-  path.sv                      -- Path class with static methods
+  sv_pathlib_sys_pkg.sv        -- $system backend package (complete Path class)
+  sv_pathlib_dpi_pkg.sv        -- DPI backend package (complete Path class)
   sv_pathlib_dpi/
-    path_dpi.sv                -- DPI backend (wrapper)
     path_dpi_impl.cc           -- DPI-C implementation (POSIX)
     dpi_system.c               -- C wrapper for system()
-  sv_pathlib_sys/
-    path_sys.sv                -- $system backend
   sv_pathlib_tests/            -- Test suite (81 assertions)
   Makefile                     -- Build & test automation
 ```
 
 ## Quick Start
 
-### Path Parsing (no backend needed)
+Just pick one backend package and import it:
 
 ```systemverilog
-import sv_pathlib_pkg::*;
+// Option A: $system backend (simple integration)
+import sv_pathlib_sys_pkg::*;
+
+// Option B: DPI backend (better performance)
+import sv_pathlib_dpi_pkg::*;
+```
+
+Then use the same `Path::` interface for everything:
+
+```systemverilog
+import sv_pathlib_sys_pkg::*;
 
 module example;
   initial begin
+    // Path parsing
     $display("filename: %s", Path::name("/home/user/project/main.sv"));  // main.sv
     $display("stem:     %s", Path::stem("/home/user/project/main.sv"));  // main
     $display("ext:      %s", Path::extension("/home/user/project/main.sv")); // .sv
@@ -55,62 +64,31 @@ module example;
     // Absolute check
     $display("absolute: %b", Path::is_absolute("/tmp/test"));  // 1
     $display("absolute: %b", Path::is_absolute("tmp/test"));   // 0
-  end
-endmodule
-```
 
-### File & Directory Operations
-
-#### $system Backend
-
-```systemverilog
-import path_sys::*;
-
-module example_sys;
-  initial begin
     // Directory operations
-    void'(path_sys::mkdir("/tmp/my_project/src"));
-    $display("dir exists: %b", path_sys::is_dir("/tmp/my_project/src"));
+    void'(Path::mkdir("/tmp/my_project/src"));
+    $display("is_dir: %b", Path::is_dir("/tmp/my_project/src"));
 
     // File I/O
-    path_sys::write_text("/tmp/my_project/README.md", "# My Project");
-    string content = path_sys::read_text("/tmp/my_project/README.md");
+    Path::write_text("/tmp/my_project/README.md", "# My Project");
+    string content = Path::read_text("/tmp/my_project/README.md");
     $display("content: %s", content);
 
     // File checks
-    $display("exists:  %b", path_sys::exists("/tmp/my_project/README.md"));
-    $display("is_file: %b", path_sys::is_file("/tmp/my_project/README.md"));
-    $display("is_empty: %b", path_sys::is_empty("/tmp/my_project/README.md"));
+    $display("exists:   %b", Path::exists("/tmp/my_project/README.md"));
+    $display("is_file:  %b", Path::is_file("/tmp/my_project/README.md"));
+    $display("is_empty: %b", Path::is_empty("/tmp/my_project/README.md"));
 
     // File operations
-    path_sys::copy("/tmp/my_project/README.md", "/tmp/my_project/README.bak");
-    path_sys::rename("/tmp/my_project/README.bak", "/tmp/my_project/README.old");
-    $display("size: %0d bytes", path_sys::size("/tmp/my_project/README.md"));
+    Path::copy("/tmp/my_project/README.md", "/tmp/my_project/README.bak");
+    Path::rename("/tmp/my_project/README.bak", "/tmp/my_project/README.old");
+    $display("size: %0d bytes", Path::size("/tmp/my_project/README.md"));
 
     // Cleanup
-    path_sys::unlink("/tmp/my_project/README.md");
-    path_sys::unlink("/tmp/my_project/README.old");
-    void'(path_sys::rmdir("/tmp/my_project/src"));
-    void'(path_sys::rmdir("/tmp/my_project"));
-  end
-endmodule
-```
-
-#### DPI Backend
-
-```systemverilog
-import path_dpi::*;
-
-module example_dpi;
-  initial begin
-    // Same API as path_sys, but uses DPI-C for better performance
-    void'(path_dpi::mkdir("/tmp/my_project/src"));
-    path_dpi::write_text("/tmp/my_project/data.txt", "hello");
-    $display("size: %0d", path_dpi::size("/tmp/my_project/data.txt"));
-
-    // DPI-specific: create symbolic link
-    void'(path_dpi::symlink("/tmp/my_project/data.txt", "/tmp/my_project/link.txt"));
-    $display("is symlink: %b", path_dpi::is_symlink("/tmp/my_project/link.txt"));
+    Path::unlink("/tmp/my_project/README.md");
+    Path::unlink("/tmp/my_project/README.old");
+    void'(Path::rmdir("/tmp/my_project/src"));
+    void'(Path::rmdir("/tmp/my_project"));
   end
 endmodule
 ```
@@ -118,25 +96,25 @@ endmodule
 ### Error Handling
 
 ```systemverilog
-import path_sys::*;
+import sv_pathlib_sys_pkg::*;
 
 module example_error;
   initial begin
     string content;
 
     // Try to read a nonexistent file
-    content = path_sys::read_text("/tmp/nonexistent.txt");
-    if (path_sys::get_last_error_code() != 0) begin
-      $display("Error: %s", path_sys::get_last_error());
+    content = Path::read_text("/tmp/nonexistent.txt");
+    if (Path::get_last_error_code() != 0) begin
+      $display("Error: %s", Path::get_last_error());
     end
 
     // Clear error state before next operation
-    path_sys::clear_error();
+    Path::clear_error();
 
     // Try to copy a nonexistent source
-    path_sys::copy("/tmp/no_such_file.txt", "/tmp/dest.txt");
-    if (path_sys::get_last_error_code() != 0) begin
-      $display("Error: %s", path_sys::get_last_error());
+    Path::copy("/tmp/no_such_file.txt", "/tmp/dest.txt");
+    if (Path::get_last_error_code() != 0) begin
+      $display("Error: %s", Path::get_last_error());
     end
   end
 endmodule
@@ -145,8 +123,7 @@ endmodule
 ### Combining Path Parsing with File Ops
 
 ```systemverilog
-import sv_pathlib_pkg::*;
-import path_sys::*;
+import sv_pathlib_sys_pkg::*;
 
 module example_combined;
   initial begin
@@ -155,40 +132,41 @@ module example_combined;
     string backup  = Path::with_suffix(src_file, ".sv.bak");
 
     // Ensure directory exists
-    void'(path_sys::mkdir(Path::parent(src_file)));
+    void'(Path::mkdir(Path::parent(src_file)));
 
     // Write file
-    path_sys::write_text(src_file, "module main; endmodule");
+    Path::write_text(src_file, "module main; endmodule");
 
     // Backup
-    path_sys::copy(src_file, backup);
+    Path::copy(src_file, backup);
 
     // Verify
-    $display("src exists:  %b", path_sys::exists(src_file));
+    $display("src exists:  %b", Path::exists(src_file));
     $display("backup ext:  %s", Path::extension(backup));  // .sv.bak
-    $display("src size:    %0d bytes", path_sys::size(src_file));
+    $display("src size:    %0d bytes", Path::size(src_file));
 
     // Cleanup
-    path_sys::unlink(src_file);
-    path_sys::unlink(backup);
+    Path::unlink(src_file);
+    Path::unlink(backup);
   end
 endmodule
 ```
 
 ## Backend Comparison
 
-| Feature | path_sys ($system) | path_dpi (DPI-C) |
-|---------|-------------------|------------------|
+| Feature | sv_pathlib_sys_pkg ($system) | sv_pathlib_dpi_pkg (DPI-C) |
+|---------|------------------------------|----------------------------|
 | Setup | Import only | Requires DPI compilation |
 | Performance | Lower (shell calls) | Higher (direct POSIX) |
 | Platform | Linux | Linux / Unix |
 | Symbolic links | Not supported | `symlink()` supported |
+| Error handling | Supported | Not supported |
 | Dependency | None | C++ compiler |
 
 ### Choosing a Backend
 
-- **Use `path_sys`** when you want simple integration with no extra build steps
-- **Use `path_dpi`** when you need better performance or symbolic link support
+- **Use `sv_pathlib_sys_pkg`** when you want simple integration with no extra build steps
+- **Use `sv_pathlib_dpi_pkg`** when you need better performance or symbolic link support
 
 ## Building & Testing
 
@@ -206,8 +184,8 @@ make test_all
 ### Run Individual Tests
 
 ```bash
-make test_path_parse      # Path parsing (no backend)
-make test_path_check_sys  # File checks (system backend)
+make test_path_parse      # Path parsing
+make test_path_check_sys  # File checks
 make test_dir_ops_sys     # Directory operations
 make test_file_io_sys     # File I/O
 make test_file_ops_sys    # File operations
@@ -224,7 +202,11 @@ make clean
 
 ## API Reference
 
-### Path Class (`sv_pathlib_pkg`)
+### Path Class
+
+All methods are static — call via `Path::method_name()`.
+
+#### Path Parsing
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
@@ -237,68 +219,54 @@ make clean
 | `with_suffix` | `static string with_suffix(string path, string new_suffix)` | Replace extension |
 | `is_absolute` | `static bit is_absolute(string path)` | Check if path is absolute |
 
-### path_sys / path_dpi Functions
+#### File Operations
 
-| Function | Signature | Description |
-|----------|-----------|-------------|
-| `exists` | `bit exists(string path)` | Check if path exists |
-| `is_file` | `bit is_file(string path)` | Check if path is a regular file |
-| `is_dir` | `bit is_dir(string path)` | Check if path is a directory |
-| `is_symlink` | `bit is_symlink(string path)` | Check if path is a symlink (DPI only) |
-| `is_empty` | `bit is_empty(string path)` | Check if file is empty |
-| `mkdir` | `int mkdir(string path)` | Create directory (recursive with `-p`) |
-| `rmdir` | `int rmdir(string path)` | Remove empty directory |
-| `read_text` | `string read_text(string path)` | Read file as string |
-| `write_text` | `void write_text(string path, string content)` | Write string to file |
-| `copy` | `void copy(string src, string dst)` | Copy file |
-| `rename` | `void rename(string old_path, string new_path)` | Rename / move file |
-| `unlink` | `void unlink(string path)` | Delete file |
-| `size` | `longint size(string path)` | Get file size in bytes (-1 if not found) |
-| `modified` | `longint modified(string path)` | Get last modification time (unix timestamp) |
-| `symlink` | `int symlink(string target, string linkpath)` | Create symbolic link (DPI only) |
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `exists` | `static bit exists(string path)` | Check if path exists |
+| `is_file` | `static bit is_file(string path)` | Check if path is a regular file |
+| `is_dir` | `static bit is_dir(string path)` | Check if path is a directory |
+| `is_symlink` | `static bit is_symlink(string path)` | Check if path is a symlink |
+| `is_empty` | `static bit is_empty(string path)` | Check if file is empty |
+| `mkdir` | `static int mkdir(string path)` | Create directory (recursive with `-p`) |
+| `rmdir` | `static int rmdir(string path)` | Remove empty directory |
+| `read_text` | `static string read_text(string path)` | Read file as string |
+| `write_text` | `static void write_text(string path, string content)` | Write string to file |
+| `copy` | `static void copy(string src, string dst)` | Copy file |
+| `rename` | `static void rename(string old_path, string new_path)` | Rename / move file |
+| `unlink` | `static void unlink(string path)` | Delete file |
+| `size` | `static longint size(string path)` | Get file size in bytes (-1 if not found) |
+| `modified` | `static longint modified(string path)` | Get last modification time (unix timestamp) |
+| `symlink` | `static int symlink(string target, string linkpath)` | Create symbolic link (DPI only) |
 
-### Error Handling (path_sys only)
+#### Error Handling
 
-| Function | Signature | Description |
-|----------|-----------|-------------|
-| `get_last_error` | `string get_last_error()` | Get last error message |
-| `get_last_error_code` | `int get_last_error_code()` | Get last error code (0 = OK) |
-| `clear_error` | `void clear_error()` | Clear error state |
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `get_last_error` | `static string get_last_error()` | Get last error message |
+| `get_last_error_code` | `static int get_last_error_code()` | Get last error code (0 = OK) |
+| `clear_error` | `static void clear_error()` | Clear error state |
 
 ## Integration
 
-### Option 1: Path parsing only (no backend)
-
-```makefile
-VERILATOR_FLAGS = --cc --exe --build
-
-your_target:
-    $(VERILATOR) $(VERILATOR_FLAGS) \
-        sv_pathlib_pkg.sv path.sv \
-        your_module.sv \
-        your_main.cpp \
-        --top-module your_module
-```
-
-### Option 2: With $system backend
+### Option 1: $system backend
 
 ```makefile
 your_target:
     $(VERILATOR) $(VERILATOR_FLAGS) \
-        sv_pathlib_pkg.sv path.sv \
-        sv_pathlib_sys/path_sys.sv \
+        sv_pathlib_sys_pkg.sv \
         your_module.sv \
         your_main.cpp \
         sv_pathlib_dpi/dpi_system.c \
         --top-module your_module
 ```
 
-### Option 3: With DPI backend
+### Option 2: DPI backend
 
 ```makefile
 your_target:
     $(VERILATOR) $(VERILATOR_FLAGS) \
-        sv_pathlib_dpi/path_dpi.sv \
+        sv_pathlib_dpi_pkg.sv \
         your_module.sv \
         your_main.cpp \
         sv_pathlib_dpi/path_dpi_impl.cc \

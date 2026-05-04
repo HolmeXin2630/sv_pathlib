@@ -1,10 +1,9 @@
-import sv_pathlib_pkg::*;
+import sv_pathlib_sys_pkg::*;
 
 module test_path_skeleton;
   initial begin
     // Test that Path class exists and can be instantiated
-    Path p = new("/tmp/test.txt");
-    $display("Path created: %s", p.str());
+    $display("Path::name: %s", Path::name("/tmp/test.txt"));
     $finish;
   end
 endmodule

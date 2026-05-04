@@ -1,4 +1,4 @@
-import path_sys::*;
+import sv_pathlib_sys_pkg::*;
 
 module test_file_ops_sys;
   int pass_count = 0;
@@ -30,27 +30,27 @@ module test_file_ops_sys;
     string renamed = "/tmp/sv_pathlib_ops_renamed.txt";
 
     // Create source file
-    path_sys::write_text(src, "test content for ops");
+    Path::write_text(src, "test content for ops");
 
     // Test copy
-    path_sys::copy(src, dst);
-    check("copy - dest exists", path_sys::exists(dst));
-    check_str("copy - content matches", path_sys::read_text(dst), "test content for ops");
+    Path::copy(src, dst);
+    check("copy - dest exists", Path::exists(dst));
+    check_str("copy - content matches", Path::read_text(dst), "test content for ops");
 
     // Test rename
-    path_sys::rename(dst, renamed);
-    check("rename - new name exists", path_sys::exists(renamed));
-    check("rename - old name gone", !path_sys::exists(dst));
+    Path::rename(dst, renamed);
+    check("rename - new name exists", Path::exists(renamed));
+    check("rename - old name gone", !Path::exists(dst));
 
     // Test size
-    check("size - correct", path_sys::size(renamed) > 0);
+    check("size - correct", Path::size(renamed) > 0);
 
     // Test modified
-    check("modified - returns positive timestamp", path_sys::modified(renamed) > 0);
+    check("modified - returns positive timestamp", Path::modified(renamed) > 0);
 
     // Cleanup
-    path_sys::unlink(src);
-    path_sys::unlink(renamed);
+    Path::unlink(src);
+    Path::unlink(renamed);
 
     $display("\nFile operation tests: %0d passed, %0d failed", pass_count, fail_count);
     if (fail_count > 0) $finish(1);

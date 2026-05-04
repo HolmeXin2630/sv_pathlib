@@ -1,5 +1,4 @@
-import sv_pathlib_pkg::*;
-import path_sys::*;
+import sv_pathlib_sys_pkg::*;
 
 module test_unified;
   int pass_count = 0;
@@ -29,15 +28,15 @@ module test_unified;
     // Test Path class (static methods)
     check("Path::name", Path::name("/tmp/test.txt"), "test.txt");
     check("Path::parent", Path::parent("/tmp/test.txt"), "/tmp");
-    check("Path::join", Path::join_path("/tmp", "test.txt"), "/tmp/test.txt");
+    check("Path::join_path", Path::join_path("/tmp", "test.txt"), "/tmp/test.txt");
 
-    // Test path_sys (file operations)
-    path_sys::write_text("/tmp/unified_test.txt", "unified content");
-    check("path_sys::read_text", path_sys::read_text("/tmp/unified_test.txt"), "unified content");
-    check_bit("path_sys::exists", path_sys::exists("/tmp/unified_test.txt"), 1);
+    // Test file operations via Path class
+    Path::write_text("/tmp/unified_test.txt", "unified content");
+    check("Path::read_text", Path::read_text("/tmp/unified_test.txt"), "unified content");
+    check_bit("Path::exists", Path::exists("/tmp/unified_test.txt"), 1);
 
     // Cleanup
-    path_sys::unlink("/tmp/unified_test.txt");
+    Path::unlink("/tmp/unified_test.txt");
 
     $display("\nUnified tests: %0d passed, %0d failed", pass_count, fail_count);
     if (fail_count > 0) $finish(1);

@@ -1,4 +1,4 @@
-import sv_pathlib_pkg::*;
+import sv_pathlib_sys_pkg::*;
 
 module test_path_parse;
   int pass_count = 0;
@@ -42,7 +42,7 @@ module test_path_parse;
     check("parent - /tmp/file.txt", Path::parent("/tmp/file.txt"), "/tmp");
     check("parent - /a/b/c/file", Path::parent("/a/b/c/file"), "/a/b/c");
 
-    // Test join()
+    // Test join_path()
     check("join_path - base + rel", Path::join_path("/tmp", "file.txt"), "/tmp/file.txt");
     check("join_path - base + abs", Path::join_path("/tmp", "/abs/file.txt"), "/abs/file.txt");
     check("join_path - trailing slash", Path::join_path("/tmp/", "file.txt"), "/tmp/file.txt");

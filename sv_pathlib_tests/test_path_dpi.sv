@@ -1,4 +1,4 @@
-import path_dpi::*;
+import sv_pathlib_dpi_pkg::*;
 
 module test_path_dpi;
   int pass_count = 0;
@@ -25,7 +25,7 @@ module test_path_dpi;
 
   initial begin
     // Create test structure
-    void'(path_dpi::mkdir(test_dir));
+    void'(Path::mkdir(test_dir));
 
     fh = $fopen(test_file, "w");
     $fwrite(fh, "DPI test content");
@@ -35,61 +35,61 @@ module test_path_dpi;
     $fclose(fh);
 
     // Test exists
-    check("exists - dir", path_dpi::exists(test_dir));
-    check("exists - file", path_dpi::exists(test_file));
-    check("exists - no", !path_dpi::exists("/tmp/nonexistent_xyz"));
+    check("exists - dir", Path::exists(test_dir));
+    check("exists - file", Path::exists(test_file));
+    check("exists - no", !Path::exists("/tmp/nonexistent_xyz"));
 
     // Test is_dir / is_file
-    check("is_dir", path_dpi::is_dir(test_dir));
-    check("is_file", path_dpi::is_file(test_file));
+    check("is_dir", Path::is_dir(test_dir));
+    check("is_file", Path::is_file(test_file));
 
     // Test is_symlink
-    void'(path_dpi::symlink(test_file, symlink_file));
-    check("is_symlink - yes", path_dpi::is_symlink(symlink_file));
-    check("is_symlink - no for file", !path_dpi::is_symlink(test_file));
+    void'(Path::symlink(test_file, symlink_file));
+    check("is_symlink - yes", Path::is_symlink(symlink_file));
+    check("is_symlink - no for file", !Path::is_symlink(test_file));
 
     // Test is_empty
-    check("is_empty - yes", path_dpi::is_empty(empty_file));
-    check("is_empty - no for non-empty", !path_dpi::is_empty(test_file));
-    check("is_empty - no for dir", !path_dpi::is_empty(test_dir));
+    check("is_empty - yes", Path::is_empty(empty_file));
+    check("is_empty - no for non-empty", !Path::is_empty(test_file));
+    check("is_empty - no for dir", !Path::is_empty(test_dir));
 
     // Test size
-    check("size > 0", path_dpi::size(test_file) > 0);
-    check("size - empty file", path_dpi::size(empty_file) == 0);
-    check("size - nonexistent", path_dpi::size("/tmp/nonexistent_xyz") == -1);
+    check("size > 0", Path::size(test_file) > 0);
+    check("size - empty file", Path::size(empty_file) == 0);
+    check("size - nonexistent", Path::size("/tmp/nonexistent_xyz") == -1);
 
     // Test modified
-    check("modified - valid", path_dpi::modified(test_file) > 0);
-    check("modified - nonexistent", path_dpi::modified("/tmp/nonexistent_xyz") == -1);
+    check("modified - valid", Path::modified(test_file) > 0);
+    check("modified - nonexistent", Path::modified("/tmp/nonexistent_xyz") == -1);
 
     // Test copy
-    path_dpi::copy(test_file, copy_file);
-    check("copy - exists after copy", path_dpi::exists(copy_file));
-    check("copy - same size", path_dpi::size(copy_file) == path_dpi::size(test_file));
+    Path::copy(test_file, copy_file);
+    check("copy - exists after copy", Path::exists(copy_file));
+    check("copy - same size", Path::size(copy_file) == Path::size(test_file));
 
     // Test rename
-    path_dpi::rename(test_file, rename_file);
-    check("rename - old gone", !path_dpi::exists(test_file));
-    check("rename - new exists", path_dpi::exists(rename_file));
+    Path::rename(test_file, rename_file);
+    check("rename - old gone", !Path::exists(test_file));
+    check("rename - new exists", Path::exists(rename_file));
 
     // Test unlink
-    path_dpi::unlink(copy_file);
-    check("unlink - gone", !path_dpi::exists(copy_file));
+    Path::unlink(copy_file);
+    check("unlink - gone", !Path::exists(copy_file));
 
     // Test rmdir on empty dir
-    void'(path_dpi::mkdir(empty_dir));
-    void'(path_dpi::rmdir(empty_dir));
-    check("rmdir - empty dir removed", !path_dpi::exists(empty_dir));
+    void'(Path::mkdir(empty_dir));
+    void'(Path::rmdir(empty_dir));
+    check("rmdir - empty dir removed", !Path::exists(empty_dir));
 
     // Test mkdir with nested paths
-    void'(path_dpi::mkdir(nested_dir));
-    check("mkdir - nested path created", path_dpi::is_dir(nested_dir));
+    void'(Path::mkdir(nested_dir));
+    check("mkdir - nested path created", Path::is_dir(nested_dir));
 
     // Cleanup
-    path_dpi::unlink(symlink_file);
-    path_dpi::unlink(rename_file);
-    path_dpi::unlink(empty_file);
-    path_dpi::unlink(copy_file);
+    Path::unlink(symlink_file);
+    Path::unlink(rename_file);
+    Path::unlink(empty_file);
+    Path::unlink(copy_file);
 
     $display("\nDPI tests: %0d passed, %0d failed", pass_count, fail_count);
     if (fail_count > 0) $finish(1);

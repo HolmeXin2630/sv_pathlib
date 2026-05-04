@@ -1,4 +1,4 @@
-import path_sys::*;
+import sv_pathlib_sys_pkg::*;
 
 module test_file_io_sys;
   int pass_count = 0;
@@ -20,19 +20,19 @@ module test_file_io_sys;
     string read_content;
 
     // Test write_text
-    path_sys::write_text(test_file, content);
-    check("write_text - file exists", path_sys::exists(test_file), 1);
+    Path::write_text(test_file, content);
+    check("write_text - file exists", Path::exists(test_file), 1);
 
     // Test read_text
-    read_content = path_sys::read_text(test_file);
+    read_content = Path::read_text(test_file);
     check("read_text - content matches", read_content, content);
 
     // Test read_text - nonexistent file
-    read_content = path_sys::read_text("/tmp/nonexistent_xyz.txt");
+    read_content = Path::read_text("/tmp/nonexistent_xyz.txt");
     check("read_text - nonexistent returns empty", read_content, "");
 
     // Cleanup
-    path_sys::unlink(test_file);
+    Path::unlink(test_file);
 
     $display("\nFile I/O tests: %0d passed, %0d failed", pass_count, fail_count);
     if (fail_count > 0) $finish(1);
