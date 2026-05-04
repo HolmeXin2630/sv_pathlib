@@ -13,14 +13,15 @@
 - **文件读写** — `read_text()`、`write_text()`、`copy()`、`rename()`、`unlink()`
 - **文件信息** — `size()`、`modified()`
 - **错误处理** — `get_last_error()`、`get_last_error_code()`、`clear_error()`
-- **两种后端** — DPI-C（高性能）和 $system（集成简单）
+- **三种后端** — VCS（零依赖）、$system（集成简单）、DPI-C（高性能）
 
 ## 目录结构
 
 ```
 sv_pathlib/
-  sv_pathlib_sys_pkg.sv        -- $system 后端包（完整 Path 类）
-  sv_pathlib_dpi_pkg.sv        -- DPI 后端包（完整 Path 类）
+  sv_pathlib_vcs_pkg.sv        -- VCS 后端包（零 DPI 依赖）
+  sv_pathlib_sys_pkg.sv        -- $system 后端包（需 dpi_system.c）
+  sv_pathlib_dpi_pkg.sv        -- DPI 后端包（需 path_dpi_impl.cc）
   sv_pathlib_dpi/
     path_dpi_impl.cc           -- DPI-C 实现（POSIX 系统调用）
     dpi_system.c               -- C 封装的 system() 函数
@@ -33,10 +34,13 @@ sv_pathlib/
 只需选择一个后端包并 import：
 
 ```systemverilog
-// 方式 A：$system 后端（集成简单）
+// 方式 A：VCS 后端（零 DPI 依赖，推荐用于 VCS）
+import sv_pathlib_vcs_pkg::*;
+
+// 方式 B：$system 后端（集成简单，需 dpi_system.c）
 import sv_pathlib_sys_pkg::*;
 
-// 方式 B：DPI 后端（性能更好）
+// 方式 C：DPI 后端（性能更好，需 path_dpi_impl.cc）
 import sv_pathlib_dpi_pkg::*;
 ```
 
@@ -154,18 +158,20 @@ endmodule
 
 ## 后端对比
 
-| 特性 | sv_pathlib_sys_pkg ($system) | sv_pathlib_dpi_pkg (DPI-C) |
-|------|------------------------------|----------------------------|
-| 集成方式 | 仅需 import | 需要 DPI 编译 |
-| 性能 | 较低（shell 调用） | 较高（直接 POSIX 调用） |
-| 平台 | Linux | Linux / Unix |
-| 符号链接 | 不支持 | 支持 `symlink()` |
-| 错误处理 | 支持 | 不支持 |
-| 依赖 | 无 | C++ 编译器 |
+| 特性 | sv_pathlib_vcs_pkg (VCS) | sv_pathlib_sys_pkg ($system) | sv_pathlib_dpi_pkg (DPI-C) |
+|------|--------------------------|------------------------------|----------------------------|
+| 集成方式 | 仅需 import | 需 dpi_system.c | 需 path_dpi_impl.cc |
+| 性能 | 较低（shell 调用） | 较低（shell 调用） | 较高（直接 POSIX 调用） |
+| 平台 | Linux | Linux | Linux / Unix |
+| 符号链接 | 不支持 | 不支持 | 支持 `symlink()` |
+| 错误处理 | 支持 | 支持 | 不支持 |
+| 依赖 | 无 | C 文件 | C++ 编译器 |
+| VCS 兼容 | 是 | 是（需 DPI 编译） | 是（需 DPI 编译） |
 
 ### 如何选择后端
 
-- **选择 `sv_pathlib_sys_pkg`**：想要简单集成，不需要额外编译步骤
+- **选择 `sv_pathlib_vcs_pkg`**：VCS 项目，希望零外部依赖
+- **选择 `sv_pathlib_sys_pkg`**：Verilator 项目，集成简单
 - **选择 `sv_pathlib_dpi_pkg`**：需要更好的性能或符号链接支持
 
 ## 构建与测试
@@ -249,7 +255,14 @@ make clean
 
 ## 集成方式
 
-### 方式一：$system 后端
+### 方式一：VCS（零 DPI 依赖）
+
+```bash
+vcs -sverilog sv_pathlib_vcs_pkg.sv your_module.sv -full64
+./simv
+```
+
+### 方式二：$system 后端（Verilator）
 
 ```makefile
 your_target:
@@ -261,7 +274,7 @@ your_target:
         --top-module your_module
 ```
 
-### 方式二：DPI 后端
+### 方式三：DPI 后端（Verilator）
 
 ```makefile
 your_target:

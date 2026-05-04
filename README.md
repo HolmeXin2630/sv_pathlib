@@ -13,14 +13,15 @@ A Python [pathlib](https://docs.python.org/3/library/pathlib.html)-inspired path
 - **File I/O** — `read_text()`, `write_text()`, `copy()`, `rename()`, `unlink()`
 - **File stats** — `size()`, `modified()`
 - **Error handling** — `get_last_error()`, `get_last_error_code()`, `clear_error()`
-- **Two backends** — DPI-C (high performance) and $system (simple integration)
+- **Three backends** — VCS (zero-dependency), $system (simple integration), DPI-C (high performance)
 
 ## Project Structure
 
 ```
 sv_pathlib/
-  sv_pathlib_sys_pkg.sv        -- $system backend package (complete Path class)
-  sv_pathlib_dpi_pkg.sv        -- DPI backend package (complete Path class)
+  sv_pathlib_vcs_pkg.sv        -- VCS backend package (zero DPI dependency)
+  sv_pathlib_sys_pkg.sv        -- $system backend package (requires dpi_system.c)
+  sv_pathlib_dpi_pkg.sv        -- DPI backend package (requires path_dpi_impl.cc)
   sv_pathlib_dpi/
     path_dpi_impl.cc           -- DPI-C implementation (POSIX)
     dpi_system.c               -- C wrapper for system()
@@ -33,10 +34,13 @@ sv_pathlib/
 Just pick one backend package and import it:
 
 ```systemverilog
-// Option A: $system backend (simple integration)
+// Option A: VCS backend (zero DPI dependency, recommended for VCS)
+import sv_pathlib_vcs_pkg::*;
+
+// Option B: $system backend (simple integration, requires dpi_system.c)
 import sv_pathlib_sys_pkg::*;
 
-// Option B: DPI backend (better performance)
+// Option C: DPI backend (better performance, requires path_dpi_impl.cc)
 import sv_pathlib_dpi_pkg::*;
 ```
 
@@ -154,18 +158,20 @@ endmodule
 
 ## Backend Comparison
 
-| Feature | sv_pathlib_sys_pkg ($system) | sv_pathlib_dpi_pkg (DPI-C) |
-|---------|------------------------------|----------------------------|
-| Setup | Import only | Requires DPI compilation |
-| Performance | Lower (shell calls) | Higher (direct POSIX) |
-| Platform | Linux | Linux / Unix |
-| Symbolic links | Not supported | `symlink()` supported |
-| Error handling | Supported | Not supported |
-| Dependency | None | C++ compiler |
+| Feature | sv_pathlib_vcs_pkg (VCS) | sv_pathlib_sys_pkg ($system) | sv_pathlib_dpi_pkg (DPI-C) |
+|---------|--------------------------|------------------------------|----------------------------|
+| Setup | Import only | Requires dpi_system.c | Requires path_dpi_impl.cc |
+| Performance | Lower (shell calls) | Lower (shell calls) | Higher (direct POSIX) |
+| Platform | Linux | Linux | Linux / Unix |
+| Symbolic links | Not supported | Not supported | `symlink()` supported |
+| Error handling | Supported | Supported | Not supported |
+| Dependency | None | C file | C++ compiler |
+| VCS compatible | Yes | Yes (needs DPI compile) | Yes (needs DPI compile) |
 
 ### Choosing a Backend
 
-- **Use `sv_pathlib_sys_pkg`** when you want simple integration with no extra build steps
+- **Use `sv_pathlib_vcs_pkg`** for VCS projects where you want zero external dependencies
+- **Use `sv_pathlib_sys_pkg`** for Verilator projects with simple integration needs
 - **Use `sv_pathlib_dpi_pkg`** when you need better performance or symbolic link support
 
 ## Building & Testing
@@ -249,7 +255,14 @@ All methods are static — call via `Path::method_name()`.
 
 ## Integration
 
-### Option 1: $system backend
+### Option 1: VCS (zero DPI dependency)
+
+```bash
+vcs -sverilog sv_pathlib_vcs_pkg.sv your_module.sv -full64
+./simv
+```
+
+### Option 2: $system backend (Verilator)
 
 ```makefile
 your_target:
@@ -261,7 +274,7 @@ your_target:
         --top-module your_module
 ```
 
-### Option 2: DPI backend
+### Option 3: DPI backend (Verilator)
 
 ```makefile
 your_target:
