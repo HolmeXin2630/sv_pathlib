@@ -1,4 +1,5 @@
 obj_dir_*/
+vcs_build/
 *.o
 *.vcd
 *.log

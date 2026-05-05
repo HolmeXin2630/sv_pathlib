@@ -205,6 +205,12 @@ package sv_pathlib_vcs_pkg;
       if (rc != 0) $warning("sv_pathlib: rename failed: %s -> %s", old_path, new_path);
     endfunction
 
+    static function int symlink(string target, string linkpath);
+      int rc = $system($sformatf("ln -s %s %s", target, linkpath));
+      if (rc != 0) $warning("sv_pathlib: symlink failed: %s -> %s", target, linkpath);
+      return rc;
+    endfunction
+
     static function void unlink(string path);
       if (exists(path)) begin
         void'($system($sformatf("rm -f %s", path)));
