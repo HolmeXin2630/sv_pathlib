@@ -14,9 +14,21 @@ module test_glob;
     end
   endtask
 
+  // Count newline-separated entries
+  function automatic int count_entries(string s);
+    int count = 0;
+    int i;
+    if (s.len() == 0) return 0;
+    count = 1;
+    for (i = 0; i < s.len(); i++) begin
+      if (s[i] == "\n") count++;
+    end
+    return count;
+  endfunction
+
   initial begin
     string test_dir = "/tmp/sv_pathlib_glob_test";
-    queue<string> results;
+    string results;
     int fh;
 
     void'(Path::mkdir(test_dir));
@@ -32,20 +44,20 @@ module test_glob;
 
 `ifdef SV_PATHLIB_USE_DPI
     results = Path::glob(test_dir, "*.sv");
-    check("glob *.sv - found 2", results.size() == 2);
+    check("glob *.sv - found 2", count_entries(results) == 2);
 
     results = Path::glob(test_dir, "*.txt");
-    check("glob *.txt - found 1", results.size() == 1);
+    check("glob *.txt - found 1", count_entries(results) == 1);
 
     void'(Path::mkdir({test_dir, "/sub"}));
     fh = $fopen({test_dir, "/sub/nested.sv"}, "w");
     $fwrite(fh, "test");
     $fclose(fh);
     results = Path::rglob(test_dir, "*.sv");
-    check("rglob *.sv - found 3 (including nested)", results.size() == 3);
+    check("rglob *.sv - found 3 (including nested)", count_entries(results) == 3);
 `else
     results = Path::glob(test_dir, "*.sv");
-    check("glob VCS mode - returns empty", results.size() == 0);
+    check("glob VCS mode - returns empty", results.len() == 0);
 `endif
 
     void'($system($sformatf("rm -rf %s", test_dir)));

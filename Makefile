@@ -1,5 +1,5 @@
-VERILATOR = verilator
-VERILATOR_FLAGS = --cc --exe --build
+VERILATOR = ~/.local/lib/python3.12/site-packages/verilator/bin/verilator
+VERILATOR_FLAGS = --cc --exe --build -Isrc -Wno-IGNOREDRETURN
 
 # VCS mode targets (default)
 .PHONY: test_vcs_all test_dpi_all test_all test_clean clean

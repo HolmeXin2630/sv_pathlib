@@ -2,52 +2,42 @@
 
 [中文文档](README_zh.md)
 
-A Python [pathlib](https://docs.python.org/3/library/pathlib.html)-inspired path library for SystemVerilog, providing file checks, directory operations, file I/O, and path parsing with a clean static-method interface.
+A Python [pathlib](https://docs.python.org/3/library/pathlib.html)-inspired path library for SystemVerilog, providing file checks, directory operations, file I/O, path parsing, and directory iteration with a clean static-method interface.
 
 ## Features
 
 - **Unified API** — All operations via `Path::` static methods, backend-transparent
-- **Path parsing** — `name()`, `stem()`, `extension()`, `parent()`, `join_path()`, `with_name()`, `with_suffix()`, `is_absolute()`
+- **Path parsing** — `name()`, `stem()`, `extension()`, `parent()`, `join_path()`, `with_name()`, `with_suffix()`, `is_absolute()`, `resolve()`
 - **File checks** — `exists()`, `is_file()`, `is_dir()`, `is_symlink()`, `is_empty()`
-- **Directory ops** — `mkdir()`, `rmdir()`
+- **Directory ops** — `mkdir()`, `rmdir()`, `iterdir()`
 - **File I/O** — `read_text()`, `write_text()`, `copy()`, `rename()`, `unlink()`
-- **File stats** — `size()`, `modified()`
+- **File stats** — `size()`, `modified()`, `stat()`
+- **Pattern matching** — `glob()`, `rglob()` (DPI mode)
+- **Utilities** — `cwd()`
 - **Error handling** — `$warning()` reports errors without global state (fork/join safe)
-- **Three backends** — VCS (zero-dependency), $system (simple integration), DPI-C (high performance)
+- **Two backends** — VCS (zero-dependency, `$system` calls), DPI-C (high performance, POSIX)
 
 ## Project Structure
 
 ```
 sv_pathlib/
-  sv_pathlib_vcs_pkg.sv        -- VCS backend package (zero DPI dependency)
-  sv_pathlib_sys_pkg.sv        -- $system backend package (requires dpi_system.c)
-  sv_pathlib_dpi_pkg.sv        -- DPI backend package (requires path_dpi_impl.cc)
-  sv_pathlib_dpi/
-    path_dpi_impl.cc           -- DPI-C implementation (POSIX)
-    dpi_system.c               -- C wrapper for system()
-  sv_pathlib_tests/            -- Test suite (81 assertions)
-  Makefile                     -- Build & test automation
+  src/
+    sv_pathlib_pkg.sv           -- Top-level package with backend selection
+    sv_pathlib_define.svh       -- Macro definitions
+    sv_pathlib_vcs_impl.svh     -- VCS backend implementation ($system)
+    sv_pathlib_dpi_impl.svh     -- DPI backend implementation (DPI-C wrappers)
+    dpi/
+      sv_pathlib_dpi.cc         -- DPI-C implementation (POSIX)
+  tests/                        -- Test suite
+  Makefile                      -- Build & test automation
 ```
 
 ## Quick Start
 
-Just pick one backend package and import it:
+Import the package and use the `Path::` interface:
 
 ```systemverilog
-// Option A: VCS backend (zero DPI dependency, recommended for VCS)
-import sv_pathlib_vcs_pkg::*;
-
-// Option B: $system backend (simple integration, requires dpi_system.c)
-import sv_pathlib_sys_pkg::*;
-
-// Option C: DPI backend (better performance, requires path_dpi_impl.cc)
-import sv_pathlib_dpi_pkg::*;
-```
-
-Then use the same `Path::` interface for everything:
-
-```systemverilog
-import sv_pathlib_sys_pkg::*;
+import sv_pathlib_pkg::*;  // VCS mode (default)
 
 module example;
   initial begin
@@ -57,17 +47,10 @@ module example;
     $display("ext:      %s", Path::extension("/home/user/project/main.sv")); // .sv
     $display("parent:   %s", Path::parent("/home/user/project/main.sv"));    // /home/user/project
 
-    // Path joining
+    // Path joining and resolve
     string full = Path::join_path("/home/user", "project/src/main.sv");
     $display("full:     %s", full);  // /home/user/project/src/main.sv
-
-    // Replace name / suffix
-    $display("new name: %s", Path::with_name("/tmp/old.txt", "new.txt"));    // /tmp/new.txt
-    $display("new ext:  %s", Path::with_suffix("/tmp/file.txt", ".sv"));     // /tmp/file.sv
-
-    // Absolute check
-    $display("absolute: %b", Path::is_absolute("/tmp/test"));  // 1
-    $display("absolute: %b", Path::is_absolute("tmp/test"));   // 0
+    $display("resolved: %s", Path::resolve("/a/b/../c/./d"));  // /a/c/d
 
     // Directory operations
     void'(Path::mkdir("/tmp/my_project/src"));
@@ -76,21 +59,19 @@ module example;
     // File I/O
     Path::write_text("/tmp/my_project/README.md", "# My Project");
     string content = Path::read_text("/tmp/my_project/README.md");
-    $display("content: %s", content);
 
-    // File checks
-    $display("exists:   %b", Path::exists("/tmp/my_project/README.md"));
-    $display("is_file:  %b", Path::is_file("/tmp/my_project/README.md"));
-    $display("is_empty: %b", Path::is_empty("/tmp/my_project/README.md"));
-
-    // File operations
-    Path::copy("/tmp/my_project/README.md", "/tmp/my_project/README.bak");
-    Path::rename("/tmp/my_project/README.bak", "/tmp/my_project/README.old");
+    // File stats
     $display("size: %0d bytes", Path::size("/tmp/my_project/README.md"));
+    $display("mtime: %0d", Path::modified("/tmp/my_project/README.md"));
+
+    // Directory iteration
+    string entries = Path::iterdir("/tmp/my_project");
+
+    // Current working directory
+    $display("cwd: %s", Path::cwd());
 
     // Cleanup
     Path::unlink("/tmp/my_project/README.md");
-    Path::unlink("/tmp/my_project/README.old");
     void'(Path::rmdir("/tmp/my_project/src"));
     void'(Path::rmdir("/tmp/my_project"));
   end
@@ -102,7 +83,7 @@ endmodule
 Errors are reported via `$warning()` — no global state, safe for fork/join concurrency.
 
 ```systemverilog
-import sv_pathlib_sys_pkg::*;
+import sv_pathlib_pkg::*;
 
 module example_error;
   initial begin
@@ -119,86 +100,71 @@ module example_error;
 endmodule
 ```
 
-### Combining Path Parsing with File Ops
+## Backend Selection
 
-```systemverilog
-import sv_pathlib_sys_pkg::*;
+Use the `+define+SV_PATHLIB_USE_DPI` macro to select the DPI backend:
 
-module example_combined;
-  initial begin
-    string base_dir = "/tmp/project";
-    string src_file = Path::join_path(base_dir, "src/main.sv");
-    string backup  = Path::with_suffix(src_file, ".sv.bak");
+| Mode | Macro | Backend | Features |
+|------|-------|---------|----------|
+| VCS (default) | (none) | `$system` calls | All path ops, iterdir, stat, cwd |
+| DPI | `+define+SV_PATHLIB_USE_DPI` | DPI-C (POSIX) | All VCS features + glob, rglob, better performance |
 
-    // Ensure directory exists
-    void'(Path::mkdir(Path::parent(src_file)));
+### VCS Mode (Default)
 
-    // Write file
-    Path::write_text(src_file, "module main; endmodule");
+```bash
+# Verilator
+verilator --cc --exe --build -Isrc \
+    src/sv_pathlib_pkg.sv your_module.sv your_main.cpp \
+    --top-module your_module
 
-    // Backup
-    Path::copy(src_file, backup);
-
-    // Verify
-    $display("src exists:  %b", Path::exists(src_file));
-    $display("backup ext:  %s", Path::extension(backup));  // .sv.bak
-    $display("src size:    %0d bytes", Path::size(src_file));
-
-    // Cleanup
-    Path::unlink(src_file);
-    Path::unlink(backup);
-  end
-endmodule
+# VCS
+vcs -sverilog src/sv_pathlib_pkg.sv your_module.sv -full64
 ```
 
-## Backend Comparison
+### DPI Mode
 
-| Feature | sv_pathlib_vcs_pkg (VCS) | sv_pathlib_sys_pkg ($system) | sv_pathlib_dpi_pkg (DPI-C) |
-|---------|--------------------------|------------------------------|----------------------------|
-| Setup | Import only | Requires dpi_system.c | Requires path_dpi_impl.cc |
-| Performance | Lower (shell calls) | Lower (shell calls) | Higher (direct POSIX) |
-| Platform | Linux | Linux | Linux / Unix |
-| Symbolic links | Not supported | Not supported | `symlink()` supported |
-| Error handling | $warning | $warning | Not supported |
-| Dependency | None | C file | C++ compiler |
-| VCS compatible | Yes | Yes (needs DPI compile) | Yes (needs DPI compile) |
-
-### Choosing a Backend
-
-- **Use `sv_pathlib_vcs_pkg`** for VCS projects where you want zero external dependencies
-- **Use `sv_pathlib_sys_pkg`** for Verilator projects with simple integration needs
-- **Use `sv_pathlib_dpi_pkg`** when you need better performance or symbolic link support
+```bash
+# Verilator
+verilator --cc --exe --build -Isrc +define+SV_PATHLIB_USE_DPI \
+    src/sv_pathlib_pkg.sv your_module.sv your_main.cpp \
+    src/dpi/sv_pathlib_dpi.cc \
+    --top-module your_module
+```
 
 ## Building & Testing
 
 ### Requirements
 
-- [Verilator](https://www.veripool.org/verilator/) (tested with v5.020)
+- [Verilator](https://www.veripool.org/verilator/) v5.020+ (pip install recommended: `pip install verilator`)
 - GCC/G++ (for DPI backend)
 
 ### Run All Tests
 
 ```bash
-make test_all
+make test_all          # Run all VCS + DPI tests
+make test_vcs_all      # Run VCS mode tests only
+make test_dpi_all      # Run DPI mode tests only
 ```
 
 ### Run Individual Tests
 
 ```bash
-make test_path_parse      # Path parsing
-make test_path_check_sys  # File checks
-make test_dir_ops_sys     # Directory operations
-make test_file_io_sys     # File I/O
-make test_file_ops_sys    # File operations
-make test_error_sys       # Error handling
-make test_path_dpi        # DPI backend
-make test_unified         # Combined usage
+make test_vcs_path_parse   # Path parsing (VCS)
+make test_vcs_resolve      # Path resolve (VCS)
+make test_vcs_stat         # File stat (VCS)
+make test_vcs_cwd          # Current directory (VCS)
+make test_vcs_dir_ops      # Directory operations (VCS)
+make test_vcs_file_io      # File I/O (VCS)
+make test_vcs_file_ops     # File operations (VCS)
+make test_vcs_path_check   # File checks (VCS)
+make test_dpi_glob         # Glob/rglob (DPI)
 ```
 
 ### Clean Build Artifacts
 
 ```bash
-make clean
+make test_clean    # Remove obj_dir_* build directories
+make clean         # Remove all build artifacts
 ```
 
 ## API Reference
@@ -219,6 +185,7 @@ All methods are static — call via `Path::method_name()`.
 | `with_name` | `static string with_name(string path, string new_name)` | Replace filename |
 | `with_suffix` | `static string with_suffix(string path, string new_suffix)` | Replace extension |
 | `is_absolute` | `static bit is_absolute(string path)` | Check if path is absolute |
+| `resolve` | `static string resolve(string path)` | Resolve `.` and `..` components |
 
 #### File Operations
 
@@ -236,41 +203,30 @@ All methods are static — call via `Path::method_name()`.
 | `copy` | `static void copy(string src, string dst)` | Copy file |
 | `rename` | `static void rename(string old_path, string new_path)` | Rename / move file |
 | `unlink` | `static void unlink(string path)` | Delete file |
+| `symlink` | `static int symlink(string target, string linkpath)` | Create symbolic link |
 | `size` | `static longint size(string path)` | Get file size in bytes (-1 if not found) |
 | `modified` | `static longint modified(string path)` | Get last modification time (unix timestamp) |
-| `symlink` | `static int symlink(string target, string linkpath)` | Create symbolic link (DPI only) |
+| `stat` | `static stat_t stat(string path)` | Get full stat info (size, mtime, atime, ctime, mode) |
+| `iterdir` | `static string iterdir(string path)` | List directory entries (newline-separated) |
+| `cwd` | `static string cwd()` | Get current working directory |
 
-## Integration
+#### Pattern Matching (DPI mode only)
 
-### Option 1: VCS (zero DPI dependency)
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `glob` | `static string glob(string path, string pattern)` | Non-recursive pattern matching |
+| `rglob` | `static string rglob(string path, string pattern)` | Recursive pattern matching |
 
-```bash
-vcs -sverilog sv_pathlib_vcs_pkg.sv your_module.sv -full64
-./simv
-```
+### stat_t Struct
 
-### Option 2: $system backend (Verilator)
-
-```makefile
-your_target:
-    $(VERILATOR) $(VERILATOR_FLAGS) \
-        sv_pathlib_sys_pkg.sv \
-        your_module.sv \
-        your_main.cpp \
-        sv_pathlib_dpi/dpi_system.c \
-        --top-module your_module
-```
-
-### Option 3: DPI backend (Verilator)
-
-```makefile
-your_target:
-    $(VERILATOR) $(VERILATOR_FLAGS) \
-        sv_pathlib_dpi_pkg.sv \
-        your_module.sv \
-        your_main.cpp \
-        sv_pathlib_dpi/path_dpi_impl.cc \
-        --top-module your_module
+```systemverilog
+typedef struct {
+  longint st_size;    // File size in bytes
+  longint st_mtime;   // Last modification time
+  longint st_atime;   // Last access time
+  longint st_ctime;   // Last status change time
+  int     st_mode;    // File mode (permissions)
+} stat_t;
 ```
 
 ## License

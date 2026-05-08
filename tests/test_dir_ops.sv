@@ -14,9 +14,21 @@ module test_dir_ops;
     end
   endtask
 
+  // Count newline-separated entries
+  function automatic int count_entries(string s);
+    int count = 0;
+    int i;
+    if (s.len() == 0) return 0;
+    count = 1;
+    for (i = 0; i < s.len(); i++) begin
+      if (s[i] == "\n") count++;
+    end
+    return count;
+  endfunction
+
   initial begin
     string test_dir = "/tmp/sv_pathlib_dirtest_new";
-    queue<string> entries;
+    string entries;
     int fh;
 
     check("mkdir - create", Path::mkdir(test_dir) == 0);
@@ -30,7 +42,7 @@ module test_dir_ops;
     $fclose(fh);
 
     entries = Path::iterdir(test_dir);
-    check("iterdir - has entries", entries.size() == 2);
+    check("iterdir - has entries", count_entries(entries) == 2);
 
     Path::unlink({test_dir, "/file_a.txt"});
     Path::unlink({test_dir, "/file_b.txt"});

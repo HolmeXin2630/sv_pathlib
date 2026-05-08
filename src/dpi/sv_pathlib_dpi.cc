@@ -79,46 +79,34 @@ extern "C" {
 
   // New functions
 
+  static char readdir_buf[65536];
+
   int sv_pathlib_readdir(const char* path, char** result) {
     DIR* dir = opendir(path);
     if (!dir) {
-      *result = strdup("");
+      readdir_buf[0] = '\0';
+      *result = readdir_buf;
       return -1;
     }
 
-    // First pass: calculate total size
     struct dirent* entry;
-    int total_len = 0;
-    int count = 0;
-    while ((entry = readdir(dir)) != NULL) {
-      if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-        continue;
-      total_len += strlen(entry->d_name) + 1; // +1 for \n
-      count++;
-    }
-    rewinddir(dir);
-
-    if (count == 0) {
-      *result = strdup("");
-      closedir(dir);
-      return 0;
-    }
-
-    // Second pass: build result string
-    *result = (char*)malloc(total_len + 1);
-    if (!*result) {
-      closedir(dir);
-      return -1;
-    }
-    (*result)[0] = '\0';
+    readdir_buf[0] = '\0';
+    int pos = 0;
+    int first = 1;
 
     while ((entry = readdir(dir)) != NULL) {
       if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
         continue;
-      strcat(*result, entry->d_name);
-      strcat(*result, "\n");
+      int len = strlen(entry->d_name);
+      if (pos + len + 2 >= (int)sizeof(readdir_buf)) break;
+      if (!first) readdir_buf[pos++] = '\n';
+      memcpy(readdir_buf + pos, entry->d_name, len);
+      pos += len;
+      first = 0;
     }
+    readdir_buf[pos] = '\0';
     closedir(dir);
+    *result = readdir_buf;
     return 0;
   }
 

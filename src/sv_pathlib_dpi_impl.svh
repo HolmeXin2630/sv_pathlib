@@ -118,32 +118,79 @@ class Path;
 
   static function string resolve(string path);
     string result = "";
-    int i, start;
+    string component = "";
+    int i;
     bit is_abs;
+    bit in_component;
     is_abs = is_absolute(path);
-    string components[$];
-    components = {};
-    start = is_abs ? 1 : 0;
-    for (i = start; i < path.len(); i++) begin
+    in_component = 0;
+    result = is_abs ? "/" : "";
+    for (i = is_abs ? 1 : 0; i < path.len(); i++) begin
       if (path[i] == "/") begin
-        if (i > start) components.push_back(path.substr(start, i - 1));
-        start = i + 1;
+        if (in_component) begin
+          if (component == "..") begin
+            if (result.len() > 1) begin
+              int last_slash = -1;
+              int j;
+              for (j = result.len() - 2; j >= 0; j--) begin
+                if (result[j] == "/") begin
+                  last_slash = j;
+                  break;
+                end
+              end
+              if (last_slash > 0)
+                result = result.substr(0, last_slash - 1);
+              else if (last_slash == 0)
+                result = "/";
+              else
+                result = "";
+            end else if (result == "/") begin
+            end
+          end else if (component != ".") begin
+            if (result == "/")
+              result = {result, component};
+            else if (result.len() == 0)
+              result = component;
+            else
+              result = {result, "/", component};
+          end
+          component = "";
+          in_component = 0;
+        end
+      end else begin
+        component = {component, path[i]};
+        in_component = 1;
       end
     end
-    if (start < path.len()) components.push_back(path.substr(start, path.len() - 1));
-    string resolved[$];
-    resolved = {};
-    foreach (components[i]) begin
-      if (components[i] == "..") begin
-        if (resolved.size() > 0) resolved.pop_back();
-      end else if (components[i] != ".") begin
-        resolved.push_back(components[i]);
+    if (in_component) begin
+      if (component == "..") begin
+        if (result.len() > 1) begin
+          int last_slash = -1;
+          int j;
+          for (j = result.len() - 2; j >= 0; j--) begin
+            if (result[j] == "/") begin
+              last_slash = j;
+              break;
+            end
+          end
+          if (last_slash > 0)
+            result = result.substr(0, last_slash - 1);
+          else if (last_slash == 0)
+            result = "/";
+          else
+            result = "";
+        end else if (result == "/") begin
+        end else if (result.len() == 0) begin
+          result = "..";
+        end
+      end else if (component != ".") begin
+        if (result == "/")
+          result = {result, component};
+        else if (result.len() == 0)
+          result = component;
+        else
+          result = {result, "/", component};
       end
-    end
-    if (is_abs) result = "/";
-    foreach (resolved[i]) begin
-      if (i > 0 || result != "") result = {result, "/"};
-      result = {result, resolved[i]};
     end
     if (result == "" && !is_abs) result = ".";
     return result;
@@ -249,41 +296,28 @@ class Path;
   // Full stat via DPI
   static function stat_t stat(string path);
     stat_t s;
-    s.st_size = 0; s.st_mtime = 0; s.st_atime = 0; s.st_ctime = 0; s.st_mode = 0;
-    void'(sv_pathlib_stat_full(path, s.st_size, s.st_mtime, s.st_atime, s.st_ctime, s.st_mode));
+    int rc;
+    s.st_size = -1; s.st_mtime = 0; s.st_atime = 0; s.st_ctime = 0; s.st_mode = 0;
+    rc = sv_pathlib_stat_full(path, s.st_size, s.st_mtime, s.st_atime, s.st_ctime, s.st_mode);
+    if (rc != 0) begin
+      s.st_size = -1;
+      s.st_mtime = 0; s.st_atime = 0; s.st_ctime = 0; s.st_mode = 0;
+    end
     return s;
   endfunction
 
-  // iterdir via DPI
-  static function queue<string> iterdir(string path);
-    queue<string> entries = {};
+  // iterdir via DPI - returns newline-separated string
+  static function string iterdir(string path);
     string result;
     int rc;
-    string entry;
-    int i;
 
     rc = sv_pathlib_readdir(path, result);
     if (rc != 0) begin
       $warning("sv_pathlib: iterdir failed: %s", path);
-      return entries;
+      return "";
     end
 
-    if (result.len() == 0) return entries;
-
-    entry = "";
-    for (i = 0; i < result.len(); i++) begin
-      if (result[i] == "\n") begin
-        if (entry.len() > 0) begin
-          entries.push_back(entry);
-          entry = "";
-        end
-      end else begin
-        entry = {entry, result[i]};
-      end
-    end
-    if (entry.len() > 0) entries.push_back(entry);
-
-    return entries;
+    return result;
   endfunction
 
   // Pattern matching (private)
@@ -326,36 +360,91 @@ class Path;
     return pi == pattern.len();
   endfunction
 
-  // Glob (non-recursive)
-  static function queue<string> glob(string path, string pattern);
-    queue<string> results = {};
-    queue<string> entries = iterdir(path);
+  // Glob (non-recursive) - returns newline-separated matches
+  static function string glob(string path, string pattern);
+    string results = "";
+    string entries = iterdir(path);
+    string entry = "";
     string full_path;
-    foreach (entries[i]) begin
-      if (fnmatch(pattern, entries[i])) begin
-        full_path = (path == "/") ? {"/", entries[i]} : {path, "/", entries[i]};
-        results.push_back(full_path);
+    int i;
+
+    if (entries.len() == 0) return results;
+
+    for (i = 0; i < entries.len(); i++) begin
+      if (entries[i] == "\n") begin
+        if (entry.len() > 0) begin
+          if (fnmatch(pattern, entry)) begin
+            full_path = (path == "/") ? {"/", entry} : {path, "/", entry};
+            if (results.len() > 0) results = {results, "\n"};
+            results = {results, full_path};
+          end
+          entry = "";
+        end
+      end else begin
+        entry = {entry, entries[i]};
       end
     end
+    // Handle last entry
+    if (entry.len() > 0) begin
+      if (fnmatch(pattern, entry)) begin
+        full_path = (path == "/") ? {"/", entry} : {path, "/", entry};
+        if (results.len() > 0) results = {results, "\n"};
+        results = {results, full_path};
+      end
+    end
+
     return results;
   endfunction
 
-  // Recursive glob
-  static function queue<string> rglob(string path, string pattern);
-    queue<string> results = {};
-    queue<string> entries = iterdir(path);
-    queue<string> sub_results;
+  // Recursive glob - returns newline-separated matches
+  static function string rglob(string path, string pattern);
+    string results = "";
+    string entries = iterdir(path);
+    string entry = "";
     string full_path;
-    foreach (entries[i]) begin
-      full_path = (path == "/") ? {"/", entries[i]} : {path, "/", entries[i]};
-      if (is_dir(full_path)) begin
-        sub_results = rglob(full_path, pattern);
-        foreach (sub_results[j]) results.push_back(sub_results[j]);
-      end
-      if (fnmatch(pattern, entries[i])) begin
-        results.push_back(full_path);
+    string sub_results;
+    string sub_entry;
+    int i, j;
+
+    if (entries.len() == 0) return results;
+
+    for (i = 0; i < entries.len(); i++) begin
+      if (entries[i] == "\n") begin
+        if (entry.len() > 0) begin
+          full_path = (path == "/") ? {"/", entry} : {path, "/", entry};
+          if (is_dir(full_path)) begin
+            sub_results = rglob(full_path, pattern);
+            if (sub_results.len() > 0) begin
+              if (results.len() > 0) results = {results, "\n"};
+              results = {results, sub_results};
+            end
+          end
+          if (fnmatch(pattern, entry)) begin
+            if (results.len() > 0) results = {results, "\n"};
+            results = {results, full_path};
+          end
+          entry = "";
+        end
+      end else begin
+        entry = {entry, entries[i]};
       end
     end
+    // Handle last entry
+    if (entry.len() > 0) begin
+      full_path = (path == "/") ? {"/", entry} : {path, "/", entry};
+      if (is_dir(full_path)) begin
+        sub_results = rglob(full_path, pattern);
+        if (sub_results.len() > 0) begin
+          if (results.len() > 0) results = {results, "\n"};
+          results = {results, sub_results};
+        end
+      end
+      if (fnmatch(pattern, entry)) begin
+        if (results.len() > 0) results = {results, "\n"};
+        results = {results, full_path};
+      end
+    end
+
     return results;
   endfunction
 

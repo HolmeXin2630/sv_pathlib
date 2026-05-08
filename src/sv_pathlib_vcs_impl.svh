@@ -101,32 +101,79 @@ class Path;
 
   static function string resolve(string path);
     string result = "";
-    int i, start;
+    string component = "";
+    int i;
     bit is_abs;
+    bit in_component;
     is_abs = is_absolute(path);
-    string components[$];
-    components = {};
-    start = is_abs ? 1 : 0;
-    for (i = start; i < path.len(); i++) begin
+    in_component = 0;
+    result = is_abs ? "/" : "";
+    for (i = is_abs ? 1 : 0; i < path.len(); i++) begin
       if (path[i] == "/") begin
-        if (i > start) components.push_back(path.substr(start, i - 1));
-        start = i + 1;
+        if (in_component) begin
+          if (component == "..") begin
+            if (result.len() > 1) begin
+              int last_slash = -1;
+              int j;
+              for (j = result.len() - 2; j >= 0; j--) begin
+                if (result[j] == "/") begin
+                  last_slash = j;
+                  break;
+                end
+              end
+              if (last_slash > 0)
+                result = result.substr(0, last_slash - 1);
+              else if (last_slash == 0)
+                result = "/";
+              else
+                result = "";
+            end else if (result == "/") begin
+            end
+          end else if (component != ".") begin
+            if (result == "/")
+              result = {result, component};
+            else if (result.len() == 0)
+              result = component;
+            else
+              result = {result, "/", component};
+          end
+          component = "";
+          in_component = 0;
+        end
+      end else begin
+        component = {component, path[i]};
+        in_component = 1;
       end
     end
-    if (start < path.len()) components.push_back(path.substr(start, path.len() - 1));
-    string resolved[$];
-    resolved = {};
-    foreach (components[i]) begin
-      if (components[i] == "..") begin
-        if (resolved.size() > 0) resolved.pop_back();
-      end else if (components[i] != ".") begin
-        resolved.push_back(components[i]);
+    if (in_component) begin
+      if (component == "..") begin
+        if (result.len() > 1) begin
+          int last_slash = -1;
+          int j;
+          for (j = result.len() - 2; j >= 0; j--) begin
+            if (result[j] == "/") begin
+              last_slash = j;
+              break;
+            end
+          end
+          if (last_slash > 0)
+            result = result.substr(0, last_slash - 1);
+          else if (last_slash == 0)
+            result = "/";
+          else
+            result = "";
+        end else if (result == "/") begin
+        end else if (result.len() == 0) begin
+          result = "..";
+        end
+      end else if (component != ".") begin
+        if (result == "/")
+          result = {result, component};
+        else if (result.len() == 0)
+          result = component;
+        else
+          result = {result, "/", component};
       end
-    end
-    if (is_abs) result = "/";
-    foreach (resolved[i]) begin
-      if (i > 0 || result != "") result = {result, "/"};
-      result = {result, resolved[i]};
     end
     if (result == "" && !is_abs) result = ".";
     return result;
@@ -150,7 +197,7 @@ class Path;
       line = line.substr(0, line.len()-2);
     if (line.len() == 0) return -1;
     void'($sscanf(line, "%d", tmp_val));
-    result = tmp_val;
+    result = longint'(tmp_val);
     return result;
   endfunction
 
@@ -293,17 +340,22 @@ class Path;
     int rc;
     string line;
     int fh;
+    int tmp_mode, tmp_atime, tmp_mtime, tmp_ctime;
     s.st_size = -1; s.st_mtime = 0; s.st_atime = 0; s.st_ctime = 0; s.st_mode = 0;
     if (!exists(path)) return s;
     s.st_size = size(path);
     s.st_mtime = modified(path);
-    rc = $system($sformatf("stat --format=%%a %%X %%Y %%Z %s > %s 2>/dev/null", path, tmpfile));
+    rc = $system($sformatf("stat -c '%%a %%X %%Y %%Z' %s > %s 2>/dev/null", path, tmpfile));
     if (rc == 0) begin
       fh = $fopen(tmpfile, "r");
       if (fh != 0) begin
         void'($fgets(line, fh));
         $fclose(fh);
-        void'($sscanf(line, "%d %d %d %d", s.st_mode, s.st_atime, s.st_mtime, s.st_ctime));
+        void'($sscanf(line, "%d %d %d %d", tmp_mode, tmp_atime, tmp_mtime, tmp_ctime));
+        s.st_mode = tmp_mode;
+        s.st_atime = longint'(tmp_atime);
+        s.st_mtime = longint'(tmp_mtime);
+        s.st_ctime = longint'(tmp_ctime);
       end
     end
     void'($system($sformatf("rm -f %s", tmpfile)));
@@ -311,44 +363,48 @@ class Path;
   endfunction
 
   // iterdir - list directory entries via ls -1 + temp file
-  static function queue<string> iterdir(string path);
-    queue<string> entries = {};
+  // Returns newline-separated string; caller splits on \n
+  static function string iterdir(string path);
+    string result = "";
     string tmpfile = "/tmp/.sv_pathlib_iterdir_tmp";
     int rc;
     string line;
     int fh;
     if (!is_dir(path)) begin
       $warning("sv_pathlib: iterdir: not a directory: %s", path);
-      return entries;
+      return result;
     end
     rc = $system($sformatf("ls -1 %s > %s 2>/dev/null", path, tmpfile));
-    if (rc != 0) return entries;
+    if (rc != 0) return result;
     fh = $fopen(tmpfile, "r");
-    if (fh == 0) return entries;
+    if (fh == 0) return result;
     while (!$feof(fh)) begin
-      if ($fgets(line, fh)) begin
+      if ($fgets(line, fh) != 0) begin
         while (line.len() > 0 && line[line.len()-1] == "\n")
           line = line.substr(0, line.len()-2);
         while (line.len() > 0 && line[line.len()-1] == "\r")
           line = line.substr(0, line.len()-2);
-        if (line.len() > 0) entries.push_back(line);
+        if (line.len() > 0) begin
+          if (result.len() > 0) result = {result, "\n"};
+          result = {result, line};
+        end
       end
     end
     $fclose(fh);
     void'($system($sformatf("rm -f %s", tmpfile)));
-    return entries;
+    return result;
   endfunction
 
   // glob - stub requiring DPI mode
-  static function queue<string> glob(string path, string pattern);
+  static function string glob(string path, string pattern);
     $error("sv_pathlib: glob() requires DPI mode (+define+SV_PATHLIB_USE_DPI)");
-    return {};
+    return "";
   endfunction
 
   // rglob - stub requiring DPI mode
-  static function queue<string> rglob(string path, string pattern);
+  static function string rglob(string path, string pattern);
     $error("sv_pathlib: rglob() requires DPI mode (+define+SV_PATHLIB_USE_DPI)");
-    return {};
+    return "";
   endfunction
 
   // cwd - get current working directory via pwd + temp file

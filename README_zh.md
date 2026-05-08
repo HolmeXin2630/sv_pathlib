@@ -2,52 +2,42 @@
 
 [English](README.md)
 
-仿照 Python [pathlib](https://docs.python.org/3/library/pathlib.html) 的 SystemVerilog 路径操作库，提供文件判断、目录操作、文件读写和路径解析功能，采用简洁的静态方法接口。
+仿照 Python [pathlib](https://docs.python.org/3/library/pathlib.html) 的 SystemVerilog 路径操作库，提供文件判断、目录操作、文件读写、路径解析和目录遍历功能，采用简洁的静态方法接口。
 
 ## 功能特性
 
 - **统一接口** — 所有操作通过 `Path::` 静态方法调用，与后端无关
-- **路径解析** — `name()`、`stem()`、`extension()`、`parent()`、`join_path()`、`with_name()`、`with_suffix()`、`is_absolute()`
+- **路径解析** — `name()`、`stem()`、`extension()`、`parent()`、`join_path()`、`with_name()`、`with_suffix()`、`is_absolute()`、`resolve()`
 - **文件判断** — `exists()`、`is_file()`、`is_dir()`、`is_symlink()`、`is_empty()`
-- **目录操作** — `mkdir()`、`rmdir()`
+- **目录操作** — `mkdir()`、`rmdir()`、`iterdir()`
 - **文件读写** — `read_text()`、`write_text()`、`copy()`、`rename()`、`unlink()`
-- **文件信息** — `size()`、`modified()`
+- **文件信息** — `size()`、`modified()`、`stat()`
+- **模式匹配** — `glob()`、`rglob()`（DPI 模式）
+- **工具函数** — `cwd()`
 - **错误处理** — 使用 `$warning()` 报告错误，无全局状态，fork/join 并发安全
-- **三种后端** — VCS（零依赖）、$system（集成简单）、DPI-C（高性能）
+- **两种后端** — VCS（零依赖，`$system` 调用）、DPI-C（高性能，POSIX 直接调用）
 
 ## 目录结构
 
 ```
 sv_pathlib/
-  sv_pathlib_vcs_pkg.sv        -- VCS 后端包（零 DPI 依赖）
-  sv_pathlib_sys_pkg.sv        -- $system 后端包（需 dpi_system.c）
-  sv_pathlib_dpi_pkg.sv        -- DPI 后端包（需 path_dpi_impl.cc）
-  sv_pathlib_dpi/
-    path_dpi_impl.cc           -- DPI-C 实现（POSIX 系统调用）
-    dpi_system.c               -- C 封装的 system() 函数
-  sv_pathlib_tests/            -- 测试套件（81 个断言）
-  Makefile                     -- 构建与测试自动化
+  src/
+    sv_pathlib_pkg.sv           -- 顶层包，通过宏选择后端
+    sv_pathlib_define.svh       -- 宏定义
+    sv_pathlib_vcs_impl.svh     -- VCS 后端实现（$system）
+    sv_pathlib_dpi_impl.svh     -- DPI 后端实现（DPI-C 封装）
+    dpi/
+      sv_pathlib_dpi.cc         -- DPI-C 实现（POSIX）
+  tests/                        -- 测试套件
+  Makefile                      -- 构建与测试自动化
 ```
 
 ## 快速上手
 
-只需选择一个后端包并 import：
+导入包并使用 `Path::` 接口：
 
 ```systemverilog
-// 方式 A：VCS 后端（零 DPI 依赖，推荐用于 VCS）
-import sv_pathlib_vcs_pkg::*;
-
-// 方式 B：$system 后端（集成简单，需 dpi_system.c）
-import sv_pathlib_sys_pkg::*;
-
-// 方式 C：DPI 后端（性能更好，需 path_dpi_impl.cc）
-import sv_pathlib_dpi_pkg::*;
-```
-
-然后使用统一的 `Path::` 接口：
-
-```systemverilog
-import sv_pathlib_sys_pkg::*;
+import sv_pathlib_pkg::*;  // VCS 模式（默认）
 
 module example;
   initial begin
@@ -57,17 +47,10 @@ module example;
     $display("扩展名: %s", Path::extension("/home/user/project/main.sv"));// .sv
     $display("父目录: %s", Path::parent("/home/user/project/main.sv"));   // /home/user/project
 
-    // 路径拼接
+    // 路径拼接和解析
     string full = Path::join_path("/home/user", "project/src/main.sv");
     $display("完整路径: %s", full);  // /home/user/project/src/main.sv
-
-    // 替换文件名 / 扩展名
-    $display("新文件名: %s", Path::with_name("/tmp/old.txt", "new.txt"));  // /tmp/new.txt
-    $display("新扩展名: %s", Path::with_suffix("/tmp/file.txt", ".sv"));  // /tmp/file.sv
-
-    // 判断是否为绝对路径
-    $display("绝对路径: %b", Path::is_absolute("/tmp/test"));  // 1
-    $display("绝对路径: %b", Path::is_absolute("tmp/test"));   // 0
+    $display("解析后: %s", Path::resolve("/a/b/../c/./d"));  // /a/c/d
 
     // 目录操作
     void'(Path::mkdir("/tmp/my_project/src"));
@@ -76,21 +59,19 @@ module example;
     // 文件读写
     Path::write_text("/tmp/my_project/README.md", "# My Project");
     string content = Path::read_text("/tmp/my_project/README.md");
-    $display("文件内容: %s", content);
 
-    // 文件判断
-    $display("存在: %b", Path::exists("/tmp/my_project/README.md"));
-    $display("是文件: %b", Path::is_file("/tmp/my_project/README.md"));
-    $display("为空: %b", Path::is_empty("/tmp/my_project/README.md"));
+    // 文件信息
+    $display("大小: %0d 字节", Path::size("/tmp/my_project/README.md"));
+    $display("修改时间: %0d", Path::modified("/tmp/my_project/README.md"));
 
-    // 文件操作
-    Path::copy("/tmp/my_project/README.md", "/tmp/my_project/README.bak");
-    Path::rename("/tmp/my_project/README.bak", "/tmp/my_project/README.old");
-    $display("文件大小: %0d 字节", Path::size("/tmp/my_project/README.md"));
+    // 目录遍历
+    string entries = Path::iterdir("/tmp/my_project");
+
+    // 当前工作目录
+    $display("cwd: %s", Path::cwd());
 
     // 清理
     Path::unlink("/tmp/my_project/README.md");
-    Path::unlink("/tmp/my_project/README.old");
     void'(Path::rmdir("/tmp/my_project/src"));
     void'(Path::rmdir("/tmp/my_project"));
   end
@@ -102,7 +83,7 @@ endmodule
 错误通过 `$warning()` 报告——无全局状态，fork/join 并发安全。
 
 ```systemverilog
-import sv_pathlib_sys_pkg::*;
+import sv_pathlib_pkg::*;
 
 module example_error;
   initial begin
@@ -119,86 +100,71 @@ module example_error;
 endmodule
 ```
 
-### 路径解析与文件操作结合使用
+## 后端选择
 
-```systemverilog
-import sv_pathlib_sys_pkg::*;
+通过 `+define+SV_PATHLIB_USE_DPI` 宏选择 DPI 后端：
 
-module example_combined;
-  initial begin
-    string base_dir = "/tmp/project";
-    string src_file = Path::join_path(base_dir, "src/main.sv");
-    string backup  = Path::with_suffix(src_file, ".sv.bak");
+| 模式 | 宏 | 后端 | 特性 |
+|------|-----|------|------|
+| VCS (默认) | (无) | `$system` 调用 | 所有路径操作、iterdir、stat、cwd |
+| DPI | `+define+SV_PATHLIB_USE_DPI` | DPI-C (POSIX) | VCS 所有功能 + glob、rglob，更高性能 |
 
-    // 确保目录存在
-    void'(Path::mkdir(Path::parent(src_file)));
+### VCS 模式（默认）
 
-    // 写入文件
-    Path::write_text(src_file, "module main; endmodule");
+```bash
+# Verilator
+verilator --cc --exe --build -Isrc \
+    src/sv_pathlib_pkg.sv your_module.sv your_main.cpp \
+    --top-module your_module
 
-    // 备份
-    Path::copy(src_file, backup);
-
-    // 验证
-    $display("源文件存在: %b", Path::exists(src_file));
-    $display("备份扩展名: %s", Path::extension(backup));  // .sv.bak
-    $display("源文件大小: %0d 字节", Path::size(src_file));
-
-    // 清理
-    Path::unlink(src_file);
-    Path::unlink(backup);
-  end
-endmodule
+# VCS
+vcs -sverilog src/sv_pathlib_pkg.sv your_module.sv -full64
 ```
 
-## 后端对比
+### DPI 模式
 
-| 特性 | sv_pathlib_vcs_pkg (VCS) | sv_pathlib_sys_pkg ($system) | sv_pathlib_dpi_pkg (DPI-C) |
-|------|--------------------------|------------------------------|----------------------------|
-| 集成方式 | 仅需 import | 需 dpi_system.c | 需 path_dpi_impl.cc |
-| 性能 | 较低（shell 调用） | 较低（shell 调用） | 较高（直接 POSIX 调用） |
-| 平台 | Linux | Linux | Linux / Unix |
-| 符号链接 | 不支持 | 不支持 | 支持 `symlink()` |
-| 错误处理 | $warning | $warning | 不支持 |
-| 依赖 | 无 | C 文件 | C++ 编译器 |
-| VCS 兼容 | 是 | 是（需 DPI 编译） | 是（需 DPI 编译） |
-
-### 如何选择后端
-
-- **选择 `sv_pathlib_vcs_pkg`**：VCS 项目，希望零外部依赖
-- **选择 `sv_pathlib_sys_pkg`**：Verilator 项目，集成简单
-- **选择 `sv_pathlib_dpi_pkg`**：需要更好的性能或符号链接支持
+```bash
+# Verilator
+verilator --cc --exe --build -Isrc +define+SV_PATHLIB_USE_DPI \
+    src/sv_pathlib_pkg.sv your_module.sv your_main.cpp \
+    src/dpi/sv_pathlib_dpi.cc \
+    --top-module your_module
+```
 
 ## 构建与测试
 
 ### 环境要求
 
-- [Verilator](https://www.veripool.org/verilator/)（已在 v5.020 上测试通过）
+- [Verilator](https://www.veripool.org/verilator/) v5.020+（推荐 pip 安装：`pip install verilator`）
 - GCC/G++（DPI 后端需要）
 
 ### 运行全部测试
 
 ```bash
-make test_all
+make test_all          # 运行全部 VCS + DPI 测试
+make test_vcs_all      # 运行 VCS 模式测试
+make test_dpi_all      # 运行 DPI 模式测试
 ```
 
 ### 运行单个测试
 
 ```bash
-make test_path_parse      # 路径解析
-make test_path_check_sys  # 文件判断
-make test_dir_ops_sys     # 目录操作
-make test_file_io_sys     # 文件读写
-make test_file_ops_sys    # 文件操作
-make test_error_sys       # 错误处理
-make test_path_dpi        # DPI 后端
-make test_unified         # 综合使用
+make test_vcs_path_parse   # 路径解析（VCS）
+make test_vcs_resolve      # 路径解析（VCS）
+make test_vcs_stat         # 文件信息（VCS）
+make test_vcs_cwd          # 当前目录（VCS）
+make test_vcs_dir_ops      # 目录操作（VCS）
+make test_vcs_file_io      # 文件读写（VCS）
+make test_vcs_file_ops     # 文件操作（VCS）
+make test_vcs_path_check   # 文件判断（VCS）
+make test_dpi_glob         # Glob/rglob（DPI）
 ```
 
 ### 清理构建产物
 
 ```bash
-make clean
+make test_clean    # 清除 obj_dir_* 构建目录
+make clean         # 清除所有构建产物
 ```
 
 ## API 参考
@@ -219,6 +185,7 @@ make clean
 | `with_name` | `static string with_name(string path, string new_name)` | 替换文件名 |
 | `with_suffix` | `static string with_suffix(string path, string new_suffix)` | 替换扩展名 |
 | `is_absolute` | `static bit is_absolute(string path)` | 判断是否为绝对路径 |
+| `resolve` | `static string resolve(string path)` | 解析 `.` 和 `..` 组件 |
 
 #### 文件操作
 
@@ -236,41 +203,30 @@ make clean
 | `copy` | `static void copy(string src, string dst)` | 复制文件 |
 | `rename` | `static void rename(string old_path, string new_path)` | 重命名 / 移动文件 |
 | `unlink` | `static void unlink(string path)` | 删除文件 |
+| `symlink` | `static int symlink(string target, string linkpath)` | 创建符号链接 |
 | `size` | `static longint size(string path)` | 获取文件大小（字节），不存在返回 -1 |
 | `modified` | `static longint modified(string path)` | 获取最后修改时间（unix 时间戳） |
-| `symlink` | `static int symlink(string target, string linkpath)` | 创建符号链接（仅 DPI） |
+| `stat` | `static stat_t stat(string path)` | 获取完整文件信息（size, mtime, atime, ctime, mode） |
+| `iterdir` | `static string iterdir(string path)` | 列出目录内容（换行分隔） |
+| `cwd` | `static string cwd()` | 获取当前工作目录 |
 
-## 集成方式
+#### 模式匹配（仅 DPI 模式）
 
-### 方式一：VCS（零 DPI 依赖）
+| 方法 | 签名 | 说明 |
+|------|------|------|
+| `glob` | `static string glob(string path, string pattern)` | 非递归模式匹配 |
+| `rglob` | `static string rglob(string path, string pattern)` | 递归模式匹配 |
 
-```bash
-vcs -sverilog sv_pathlib_vcs_pkg.sv your_module.sv -full64
-./simv
-```
+### stat_t 结构体
 
-### 方式二：$system 后端（Verilator）
-
-```makefile
-your_target:
-    $(VERILATOR) $(VERILATOR_FLAGS) \
-        sv_pathlib_sys_pkg.sv \
-        your_module.sv \
-        your_main.cpp \
-        sv_pathlib_dpi/dpi_system.c \
-        --top-module your_module
-```
-
-### 方式三：DPI 后端（Verilator）
-
-```makefile
-your_target:
-    $(VERILATOR) $(VERILATOR_FLAGS) \
-        sv_pathlib_dpi_pkg.sv \
-        your_module.sv \
-        your_main.cpp \
-        sv_pathlib_dpi/path_dpi_impl.cc \
-        --top-module your_module
+```systemverilog
+typedef struct {
+  longint st_size;    // 文件大小（字节）
+  longint st_mtime;   // 最后修改时间
+  longint st_atime;   // 最后访问时间
+  longint st_ctime;   // 最后状态变更时间
+  int     st_mode;    // 文件模式（权限）
+} stat_t;
 ```
 
 ## 许可证
