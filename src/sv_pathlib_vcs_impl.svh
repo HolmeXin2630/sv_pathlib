@@ -179,6 +179,15 @@ class Path;
     return result;
   endfunction
 
+  // Private helper: generate unique temp file name
+  static int _tmp_counter = 0;
+  static function string _tmpfile(string prefix);
+    int seed;
+    seed = int'($random) ^ int'($time) * 37 + _tmp_counter * 131;
+    _tmp_counter++;
+    return $sformatf("/tmp/.sv_pathlib_%s_%0d_%0d.tmp", prefix, $time, seed);
+  endfunction
+
   // Private helper: read a single integer from a temp file (used by size/modified)
   static function longint _read_temp_longint(string tmpfile);
     int fh;
@@ -304,10 +313,11 @@ class Path;
 
   // File info (via stat redirect to temp file)
   static function longint size(string path);
-    string tmpfile = "/tmp/.sv_pathlib_stat_tmp";
+    string tmpfile;
     longint result;
     int rc;
     if (!exists(path)) return -1;
+    tmpfile = _tmpfile("stat");
     rc = $system($sformatf("stat --format=%%s %s > %s 2>/dev/null", path, tmpfile));
     if (rc != 0) begin
       void'($system($sformatf("rm -f %s", tmpfile)));
@@ -319,10 +329,11 @@ class Path;
   endfunction
 
   static function longint modified(string path);
-    string tmpfile = "/tmp/.sv_pathlib_mtime_tmp";
+    string tmpfile;
     longint result;
     int rc;
     if (!exists(path)) return -1;
+    tmpfile = _tmpfile("mtime");
     rc = $system($sformatf("stat --format=%%Y %s > %s 2>/dev/null", path, tmpfile));
     if (rc != 0) begin
       void'($system($sformatf("rm -f %s", tmpfile)));
@@ -336,13 +347,14 @@ class Path;
   // stat - full stat info via stat command + temp file
   static function stat_t stat(string path);
     stat_t s;
-    string tmpfile = "/tmp/.sv_pathlib_stat_full_tmp";
+    string tmpfile;
     int rc;
     string line;
     int fh;
     int tmp_mode, tmp_atime, tmp_mtime, tmp_ctime;
     s.st_size = -1; s.st_mtime = 0; s.st_atime = 0; s.st_ctime = 0; s.st_mode = 0;
     if (!exists(path)) return s;
+    tmpfile = _tmpfile("stat");
     s.st_size = size(path);
     s.st_mtime = modified(path);
     rc = $system($sformatf("stat -c '%%a %%X %%Y %%Z' %s > %s 2>/dev/null", path, tmpfile));
@@ -366,7 +378,7 @@ class Path;
   // Returns newline-separated string; caller splits on \n
   static function string iterdir(string path);
     string result = "";
-    string tmpfile = "/tmp/.sv_pathlib_iterdir_tmp";
+    string tmpfile;
     int rc;
     string line;
     int fh;
@@ -374,6 +386,7 @@ class Path;
       $warning("sv_pathlib: iterdir: not a directory: %s", path);
       return result;
     end
+    tmpfile = _tmpfile("iterdir");
     rc = $system($sformatf("ls -1 %s > %s 2>/dev/null", path, tmpfile));
     if (rc != 0) return result;
     fh = $fopen(tmpfile, "r");
@@ -409,9 +422,10 @@ class Path;
 
   // cwd - get current working directory via pwd + temp file
   static function string cwd();
-    string tmpfile = "/tmp/.sv_pathlib_cwd_tmp";
+    string tmpfile;
     string result = "";
     int fh;
+    tmpfile = _tmpfile("cwd");
     void'($system($sformatf("pwd > %s 2>/dev/null", tmpfile)));
     fh = $fopen(tmpfile, "r");
     if (fh != 0) begin
@@ -428,9 +442,10 @@ class Path;
 
   // Environment variable access
   static function string getenv(string name);
-    string tmpfile = "/tmp/.sv_pathlib_env_tmp";
+    string tmpfile;
     string result = "";
     int fh;
+    tmpfile = _tmpfile("env");
     void'($system($sformatf("printenv %s > %s 2>/dev/null", name, tmpfile)));
     fh = $fopen(tmpfile, "r");
     if (fh != 0) begin
