@@ -123,4 +123,17 @@ extern "C" {
     return 0;
   }
 
+  static char getenv_buf[4096];
+
+  const char* sv_pathlib_getenv(const char* name) {
+    const char* val = getenv(name);
+    if (!val) {
+      getenv_buf[0] = '\0';
+      return getenv_buf;
+    }
+    strncpy(getenv_buf, val, sizeof(getenv_buf) - 1);
+    getenv_buf[sizeof(getenv_buf) - 1] = '\0';
+    return getenv_buf;
+  }
+
 }

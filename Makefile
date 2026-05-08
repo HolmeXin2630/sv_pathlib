@@ -84,7 +84,17 @@ test_vcs_path_check:
 		-o test_path_check
 	./obj_dir_vcs_path_check/test_path_check
 
-test_vcs_all: test_vcs_path_parse test_vcs_resolve test_vcs_stat test_vcs_cwd test_vcs_dir_ops test_vcs_file_io test_vcs_file_ops test_vcs_path_check
+test_vcs_getenv:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		src/sv_pathlib_pkg.sv \
+		tests/test_getenv.sv \
+		tests/main_getenv.cpp \
+		--top-module test_getenv \
+		--Mdir obj_dir_vcs_getenv \
+		-o test_getenv
+	./obj_dir_vcs_getenv/test_getenv
+
+test_vcs_all: test_vcs_path_parse test_vcs_resolve test_vcs_stat test_vcs_cwd test_vcs_dir_ops test_vcs_file_io test_vcs_file_ops test_vcs_path_check test_vcs_getenv
 	@echo "All VCS mode tests passed!"
 
 # DPI mode targets
@@ -196,7 +206,19 @@ test_dpi_path_check:
 		-o test_path_check
 	./obj_dir_dpi_path_check/test_path_check
 
-test_dpi_all: test_dpi_path_parse test_dpi_resolve test_dpi_stat test_dpi_cwd test_dpi_dir_ops test_dpi_file_io test_dpi_file_ops test_dpi_glob test_dpi_path_check
+test_dpi_getenv:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		+define+SV_PATHLIB_USE_DPI \
+		src/sv_pathlib_pkg.sv \
+		tests/test_getenv.sv \
+		tests/main_getenv.cpp \
+		src/dpi/sv_pathlib_dpi.cc \
+		--top-module test_getenv \
+		--Mdir obj_dir_dpi_getenv \
+		-o test_getenv
+	./obj_dir_dpi_getenv/test_getenv
+
+test_dpi_all: test_dpi_path_parse test_dpi_resolve test_dpi_stat test_dpi_cwd test_dpi_dir_ops test_dpi_file_io test_dpi_file_ops test_dpi_glob test_dpi_path_check test_dpi_getenv
 	@echo "All DPI mode tests passed!"
 
 test_all: test_vcs_all test_dpi_all

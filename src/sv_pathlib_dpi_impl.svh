@@ -14,6 +14,7 @@ import "DPI-C" function void   sv_pathlib_unlink(input string path);
 import "DPI-C" function int    sv_pathlib_symlink(input string target, input string linkpath);
 import "DPI-C" function int    sv_pathlib_readdir(input string path, output string result);
 import "DPI-C" function int    sv_pathlib_stat_full(input string path, output longint size, output longint mtime, output longint atime, output longint ctime, output int mode);
+import "DPI-C" function string sv_pathlib_getenv(input string name);
 
 typedef struct {
   longint st_size;
@@ -465,5 +466,10 @@ class Path;
     end
     void'($system($sformatf("rm -f %s", tmpfile)));
     return result;
+  endfunction
+
+  // Environment variable access (via DPI)
+  static function string getenv(string name);
+    return sv_pathlib_getenv(name);
   endfunction
 endclass

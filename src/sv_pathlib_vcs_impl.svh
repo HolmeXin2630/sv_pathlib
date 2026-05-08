@@ -425,4 +425,23 @@ class Path;
     void'($system($sformatf("rm -f %s", tmpfile)));
     return result;
   endfunction
+
+  // Environment variable access
+  static function string getenv(string name);
+    string tmpfile = "/tmp/.sv_pathlib_env_tmp";
+    string result = "";
+    int fh;
+    void'($system($sformatf("printenv %s > %s 2>/dev/null", name, tmpfile)));
+    fh = $fopen(tmpfile, "r");
+    if (fh != 0) begin
+      void'($fgets(result, fh));
+      $fclose(fh);
+      while (result.len() > 0 && result[result.len()-1] == "\n")
+        result = result.substr(0, result.len()-2);
+      while (result.len() > 0 && result[result.len()-1] == "\r")
+        result = result.substr(0, result.len()-2);
+    end
+    void'($system($sformatf("rm -f %s", tmpfile)));
+    return result;
+  endfunction
 endclass
