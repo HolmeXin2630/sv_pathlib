@@ -179,6 +179,47 @@ class Path;
     return result;
   endfunction
 
+  static function string absolute(string path);
+    if (is_absolute(path)) return resolve(path);
+    return resolve(join_path(cwd(), path));
+  endfunction
+
+  static function string relative_to(string path, string base);
+    string rpath, rbase;
+    string tmpfile;
+    string result;
+    int rc, fh;
+
+    rpath = resolve(path);
+    rbase = resolve(base);
+
+    if (!is_absolute(rpath) || !is_absolute(rbase)) begin
+      $warning("sv_pathlib: relative_to requires absolute paths");
+      return "";
+    end
+
+    tmpfile = _tmpfile("rel");
+    rc = $system($sformatf("realpath --relative-to=%s %s > %s 2>/dev/null", rbase, rpath, tmpfile));
+    if (rc != 0) begin
+      void'($system($sformatf("rm -f %s", tmpfile)));
+      $warning("sv_pathlib: relative_to failed: %s relative to %s", path, base);
+      return "";
+    end
+    result = "";
+    fh = $fopen(tmpfile, "r");
+    if (fh != 0) begin
+      void'($fgets(result, fh));
+      $fclose(fh);
+      while (result.len() > 0 && result[result.len()-1] == "\n")
+        result = result.substr(0, result.len()-2);
+      while (result.len() > 0 && result[result.len()-1] == "\r")
+        result = result.substr(0, result.len()-2);
+    end
+    void'($system($sformatf("rm -f %s", tmpfile)));
+    if (result.len() == 0) result = ".";
+    return result;
+  endfunction
+
   // Private helper: generate unique temp file name
   static function string _tmpfile(string prefix);
     int seed;
