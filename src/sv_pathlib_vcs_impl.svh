@@ -180,11 +180,9 @@ class Path;
   endfunction
 
   // Private helper: generate unique temp file name
-  static int _tmp_counter = 0;
   static function string _tmpfile(string prefix);
     int seed;
-    seed = int'($random) ^ int'($time) * 37 + _tmp_counter * 131;
-    _tmp_counter++;
+    seed = int'($random) ^ int'($time) * 37;
     return $sformatf("/tmp/.sv_pathlib_%s_%0d_%0d.tmp", prefix, $time, seed);
   endfunction
 
