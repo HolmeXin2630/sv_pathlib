@@ -383,26 +383,25 @@ class Path;
     return result;
   endfunction
 
-  // stat - full stat info via stat command + temp file
+  // stat - full stat info via single stat command + temp file
   static function stat_t stat(string path);
     stat_t s;
     string tmpfile;
     int rc;
     string line;
     int fh;
-    int tmp_mode, tmp_atime, tmp_mtime, tmp_ctime;
+    int tmp_size, tmp_mode, tmp_atime, tmp_mtime, tmp_ctime;
     s.st_size = -1; s.st_mtime = 0; s.st_atime = 0; s.st_ctime = 0; s.st_mode = 0;
     if (!exists(path)) return s;
     tmpfile = _tmpfile("stat");
-    s.st_size = size(path);
-    s.st_mtime = modified(path);
-    rc = $system($sformatf("stat -c '%%a %%X %%Y %%Z' %s > %s 2>/dev/null", path, tmpfile));
+    rc = $system($sformatf("stat -c '%%s %%a %%X %%Y %%Z' %s > %s 2>/dev/null", path, tmpfile));
     if (rc == 0) begin
       fh = $fopen(tmpfile, "r");
       if (fh != 0) begin
         void'($fgets(line, fh));
         $fclose(fh);
-        void'($sscanf(line, "%d %d %d %d", tmp_mode, tmp_atime, tmp_mtime, tmp_ctime));
+        void'($sscanf(line, "%d %d %d %d %d", tmp_size, tmp_mode, tmp_atime, tmp_mtime, tmp_ctime));
+        s.st_size = longint'(tmp_size);
         s.st_mode = tmp_mode;
         s.st_atime = longint'(tmp_atime);
         s.st_mtime = longint'(tmp_mtime);

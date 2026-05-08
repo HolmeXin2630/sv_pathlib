@@ -15,6 +15,8 @@ import "DPI-C" function int    sv_pathlib_symlink(input string target, input str
 import "DPI-C" function int    sv_pathlib_readdir(input string path, output string result);
 import "DPI-C" function int    sv_pathlib_stat_full(input string path, output longint size, output longint mtime, output longint atime, output longint ctime, output int mode);
 import "DPI-C" function string sv_pathlib_getenv(input string name);
+import "DPI-C" function int    sv_pathlib_getcwd(output string result);
+import "DPI-C" function int    sv_pathlib_relative_to(input string path, input string base, output string result);
 
 typedef struct {
   longint st_size;
@@ -204,9 +206,8 @@ class Path;
 
   static function string relative_to(string path, string base);
     string rpath, rbase;
-    string tmpfile;
     string result;
-    int rc, fh;
+    int rc;
 
     rpath = resolve(path);
     rbase = resolve(base);
@@ -216,25 +217,11 @@ class Path;
       return "";
     end
 
-    tmpfile = "/tmp/.sv_pathlib_rel_tmp";
-    rc = $system($sformatf("realpath --relative-to=%s %s > %s 2>/dev/null", rbase, rpath, tmpfile));
+    rc = sv_pathlib_relative_to(rpath, rbase, result);
     if (rc != 0) begin
-      void'($system($sformatf("rm -f %s", tmpfile)));
       $warning("sv_pathlib: relative_to failed: %s relative to %s", path, base);
       return "";
     end
-    result = "";
-    fh = $fopen(tmpfile, "r");
-    if (fh != 0) begin
-      void'($fgets(result, fh));
-      $fclose(fh);
-      while (result.len() > 0 && result[result.len()-1] == "\n")
-        result = result.substr(0, result.len()-2);
-      while (result.len() > 0 && result[result.len()-1] == "\r")
-        result = result.substr(0, result.len()-2);
-    end
-    void'($system($sformatf("rm -f %s", tmpfile)));
-    if (result.len() == 0) result = ".";
     return result;
   endfunction
 
@@ -490,22 +477,15 @@ class Path;
     return results;
   endfunction
 
-  // Current working directory (via temp file, same as VCS)
+  // Current working directory (via DPI-C getcwd)
   static function string cwd();
-    string tmpfile = "/tmp/.sv_pathlib_cwd_tmp";
-    string result = "";
-    int fh;
-    void'($system($sformatf("pwd > %s 2>/dev/null", tmpfile)));
-    fh = $fopen(tmpfile, "r");
-    if (fh != 0) begin
-      void'($fgets(result, fh));
-      $fclose(fh);
-      while (result.len() > 0 && result[result.len()-1] == "\n")
-        result = result.substr(0, result.len()-2);
-      while (result.len() > 0 && result[result.len()-1] == "\r")
-        result = result.substr(0, result.len()-2);
+    string result;
+    int rc;
+    rc = sv_pathlib_getcwd(result);
+    if (rc != 0) begin
+      $warning("sv_pathlib: getcwd failed");
+      return "";
     end
-    void'($system($sformatf("rm -f %s", tmpfile)));
     return result;
   endfunction
 

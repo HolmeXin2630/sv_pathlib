@@ -136,4 +136,57 @@ extern "C" {
     return getenv_buf;
   }
 
+  int sv_pathlib_getcwd(char** result) {
+    char buf[4096];
+    if (!getcwd(buf, sizeof(buf))) return -1;
+    *result = strdup(buf);
+    return 0;
+  }
+
+  int sv_pathlib_relative_to(const char* path, const char* base, char** result) {
+    char rpath[4096], rbase[4096];
+    const char *pp, *bp;
+    const char *p_next, *b_next;
+    char out[4096];
+    int up_count = 0;
+
+    if (!realpath(path, rpath) || !realpath(base, rbase))
+      return -1;
+
+    // Step 1: find common prefix, advance pp and bp past it
+    pp = rpath; bp = rbase;
+    while (*pp || *bp) {
+      p_next = pp; while (*p_next && *p_next != '/') p_next++;
+      b_next = bp; while (*b_next && *b_next != '/') b_next++;
+
+      int plen = (int)(p_next - pp);
+      int blen = (int)(b_next - bp);
+      if (plen != blen || strncmp(pp, bp, plen) != 0) break;
+      pp = *p_next ? p_next + 1 : p_next;
+      bp = *b_next ? b_next + 1 : b_next;
+    }
+
+    // Step 2: count remaining segments in base path
+    if (*bp) {
+      up_count = 1;
+      const char *p = bp;
+      while (*p) { if (*p == '/') up_count++; p++; }
+    }
+
+    // Step 3: build result
+    out[0] = '\0';
+    for (int i = 0; i < up_count; i++) {
+      if (i > 0) strcat(out, "/");
+      strcat(out, "..");
+    }
+    if (*pp) {
+      if (out[0] != '\0') strcat(out, "/");
+      strcat(out, pp);
+    }
+    if (out[0] == '\0') strcpy(out, ".");
+
+    *result = strdup(out);
+    return 0;
+  }
+
 }
