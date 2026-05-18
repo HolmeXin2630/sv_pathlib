@@ -24,6 +24,7 @@ sv_pathlib/
   src/
     sv_pathlib_pkg.sv           -- Top-level package with backend selection
     sv_pathlib_define.svh       -- Macro definitions
+    sv_pathlib_common.svh       -- Shared path parsing & file I/O (both backends)
     sv_pathlib_vcs_impl.svh     -- VCS backend implementation ($system)
     sv_pathlib_dpi_impl.svh     -- DPI backend implementation (DPI-C wrappers)
     dpi/
@@ -136,34 +137,48 @@ verilator --cc --exe --build -Isrc +define+SV_PATHLIB_USE_DPI \
 ### Requirements
 
 - [Verilator](https://www.veripool.org/verilator/) v5.020+ (pip install recommended: `pip install verilator`)
+- [VCS](https://www.synopsys.com/verification/simulation/vcs.html) (optional, for VCS simulator)
 - GCC/G++ (for DPI backend)
+
+### Simulator Selection
+
+Two Makefiles are provided for different simulators:
+
+| Makefile | Simulator | Usage |
+|----------|-----------|-------|
+| `Makefile.verilator` | Verilator | `make -f Makefile.verilator <target>` |
+| `Makefile.vcs` | VCS | `make -f Makefile.vcs <target>` |
+| `Makefile` | Both | `make <target>` (wrapper) |
 
 ### Run All Tests
 
 ```bash
-make test_all          # Run all VCS + DPI tests
-make test_vcs_all      # Run VCS mode tests only
-make test_dpi_all      # Run DPI mode tests only
+make test_all                     # Run all tests on both simulators
+make test_verilator_all           # Run all tests on Verilator
+make test_vcs_all                 # Run all tests on VCS
+
+make test_verilator_vcs_all       # VCS backend mode on Verilator
+make test_verilator_dpi_all       # DPI backend mode on Verilator
+make test_vcs_vcs_all             # VCS backend mode on VCS
+make test_vcs_dpi_all             # DPI backend mode on VCS
 ```
 
 ### Run Individual Tests
 
 ```bash
-make test_vcs_path_parse   # Path parsing (VCS)
-make test_vcs_resolve      # Path resolve (VCS)
-make test_vcs_stat         # File stat (VCS)
-make test_vcs_cwd          # Current directory (VCS)
-make test_vcs_dir_ops      # Directory operations (VCS)
-make test_vcs_file_io      # File I/O (VCS)
-make test_vcs_file_ops     # File operations (VCS)
-make test_vcs_path_check   # File checks (VCS)
-make test_dpi_glob         # Glob/rglob (DPI)
+# Verilator
+make -f Makefile.verilator test_vcs_path_parse   # VCS backend mode
+make -f Makefile.verilator test_dpi_glob          # DPI backend mode
+
+# VCS
+make -f Makefile.vcs test_vcs_path_parse          # VCS backend mode
+make -f Makefile.vcs test_dpi_glob                # DPI backend mode
 ```
 
 ### Clean Build Artifacts
 
 ```bash
-make test_clean    # Remove obj_dir_* build directories
+make test_clean    # Remove obj_dir_* build directories (both simulators)
 make clean         # Remove all build artifacts
 ```
 

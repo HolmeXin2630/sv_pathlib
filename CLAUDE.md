@@ -33,11 +33,12 @@ make clean             # 清除所有 obj_dir* 构建目录
 **文件结构**：
 - `src/sv_pathlib_pkg.sv` — 顶层包，通过 `ifdef` 选择后端
 - `src/sv_pathlib_define.svh` — 宏定义
-- `src/sv_pathlib_vcs_impl.svh` — VCS 后端实现
-- `src/sv_pathlib_dpi_impl.svh` — DPI 后端实现
-- `src/dpi/sv_pathlib_dpi.cc` — DPI-C 实现
+- `src/sv_pathlib_common.svh` — 共享代码（路径解析、read_text、write_text），两个后端 `include` 引用
+- `src/sv_pathlib_vcs_impl.svh` — VCS 后端实现（文件操作通过 `$system`）
+- `src/sv_pathlib_dpi_impl.svh` — DPI 后端实现（DPI-C 包装）
+- `src/dpi/sv_pathlib_dpi.cc` — DPI-C 实现（POSIX API）
 
-**路径解析**在两种后端中是完全相同的纯 SystemVerilog 实现，通过 `include` 引入。
+**路径解析**在 `sv_pathlib_common.svh` 中实现，两个后端通过 `include` 共享同一份代码。
 
 **测试结构**：每个测试是 SV 模块 + 对应的 C++ `main*.cpp`（Verilator 入口），临时文件在 `/tmp/sv_pathlib_*` 下创建并自清理。
 

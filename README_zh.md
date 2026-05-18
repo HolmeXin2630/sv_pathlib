@@ -24,6 +24,7 @@ sv_pathlib/
   src/
     sv_pathlib_pkg.sv           -- 顶层包，通过宏选择后端
     sv_pathlib_define.svh       -- 宏定义
+    sv_pathlib_common.svh       -- 共享代码（路径解析、read_text、write_text）
     sv_pathlib_vcs_impl.svh     -- VCS 后端实现（$system）
     sv_pathlib_dpi_impl.svh     -- DPI 后端实现（DPI-C 封装）
     dpi/
@@ -136,34 +137,48 @@ verilator --cc --exe --build -Isrc +define+SV_PATHLIB_USE_DPI \
 ### 环境要求
 
 - [Verilator](https://www.veripool.org/verilator/) v5.020+（推荐 pip 安装：`pip install verilator`）
+- [VCS](https://www.synopsys.com/verification/simulation/vcs.html)（可选，用于 VCS 仿真器）
 - GCC/G++（DPI 后端需要）
+
+### 仿真器选择
+
+提供两个 Makefile 用于不同仿真器：
+
+| Makefile | 仿真器 | 用法 |
+|----------|--------|------|
+| `Makefile.verilator` | Verilator | `make -f Makefile.verilator <target>` |
+| `Makefile.vcs` | VCS | `make -f Makefile.vcs <target>` |
+| `Makefile` | 两者 | `make <target>`（wrapper） |
 
 ### 运行全部测试
 
 ```bash
-make test_all          # 运行全部 VCS + DPI 测试
-make test_vcs_all      # 运行 VCS 模式测试
-make test_dpi_all      # 运行 DPI 模式测试
+make test_all                     # 在两个仿真器上运行全部测试
+make test_verilator_all           # 在 Verilator 上运行全部测试
+make test_vcs_all                 # 在 VCS 上运行全部测试
+
+make test_verilator_vcs_all       # VCS 后端模式 + Verilator 仿真器
+make test_verilator_dpi_all       # DPI 后端模式 + Verilator 仿真器
+make test_vcs_vcs_all             # VCS 后端模式 + VCS 仿真器
+make test_vcs_dpi_all             # DPI 后端模式 + VCS 仿真器
 ```
 
 ### 运行单个测试
 
 ```bash
-make test_vcs_path_parse   # 路径解析（VCS）
-make test_vcs_resolve      # 路径解析（VCS）
-make test_vcs_stat         # 文件信息（VCS）
-make test_vcs_cwd          # 当前目录（VCS）
-make test_vcs_dir_ops      # 目录操作（VCS）
-make test_vcs_file_io      # 文件读写（VCS）
-make test_vcs_file_ops     # 文件操作（VCS）
-make test_vcs_path_check   # 文件判断（VCS）
-make test_dpi_glob         # Glob/rglob（DPI）
+# Verilator
+make -f Makefile.verilator test_vcs_path_parse   # VCS 后端模式
+make -f Makefile.verilator test_dpi_glob          # DPI 后端模式
+
+# VCS
+make -f Makefile.vcs test_vcs_path_parse          # VCS 后端模式
+make -f Makefile.vcs test_dpi_glob                # DPI 后端模式
 ```
 
 ### 清理构建产物
 
 ```bash
-make test_clean    # 清除 obj_dir_* 构建目录
+make test_clean    # 清除 obj_dir_* 构建目录（两个仿真器）
 make clean         # 清除所有构建产物
 ```
 

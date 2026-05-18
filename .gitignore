@@ -1,5 +1,13 @@
 obj_dir_*/
 vcs_build/
+csrc/
 *.o
 *.vcd
 *.log
+.playwright-cli/
+batch_installer
+container_setup/
+efttool
+install_bin/
+installer
+setup.sh

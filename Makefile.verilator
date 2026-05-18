@@ -1,0 +1,275 @@
+VERILATOR ?= verilator
+VERILATOR_FLAGS = --cc --exe --build -Isrc -Wno-IGNOREDRETURN
+
+# VCS mode targets
+.PHONY: test_vcs_all test_dpi_all test_all test_clean clean
+
+test_vcs_path_parse:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		src/sv_pathlib_pkg.sv \
+		tests/test_path_parse.sv \
+		tests/main_path_parse.cpp \
+		--top-module test_path_parse \
+		--Mdir obj_dir_vcs_path_parse \
+		-o test_path_parse
+	./obj_dir_vcs_path_parse/test_path_parse
+
+test_vcs_resolve:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		src/sv_pathlib_pkg.sv \
+		tests/test_resolve.sv \
+		tests/main_resolve.cpp \
+		--top-module test_resolve \
+		--Mdir obj_dir_vcs_resolve \
+		-o test_resolve
+	./obj_dir_vcs_resolve/test_resolve
+
+test_vcs_stat:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		src/sv_pathlib_pkg.sv \
+		tests/test_stat.sv \
+		tests/main_stat.cpp \
+		--top-module test_stat \
+		--Mdir obj_dir_vcs_stat \
+		-o test_stat
+	./obj_dir_vcs_stat/test_stat
+
+test_vcs_cwd:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		src/sv_pathlib_pkg.sv \
+		tests/test_cwd.sv \
+		tests/main_cwd.cpp \
+		--top-module test_cwd \
+		--Mdir obj_dir_vcs_cwd \
+		-o test_cwd
+	./obj_dir_vcs_cwd/test_cwd
+
+test_vcs_dir_ops:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		src/sv_pathlib_pkg.sv \
+		tests/test_dir_ops.sv \
+		tests/main_dir_ops.cpp \
+		--top-module test_dir_ops \
+		--Mdir obj_dir_vcs_dir_ops \
+		-o test_dir_ops
+	./obj_dir_vcs_dir_ops/test_dir_ops
+
+test_vcs_file_io:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		src/sv_pathlib_pkg.sv \
+		tests/test_file_io.sv \
+		tests/main_file_io.cpp \
+		--top-module test_file_io \
+		--Mdir obj_dir_vcs_file_io \
+		-o test_file_io
+	./obj_dir_vcs_file_io/test_file_io
+
+test_vcs_file_ops:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		src/sv_pathlib_pkg.sv \
+		tests/test_file_ops.sv \
+		tests/main_file_ops.cpp \
+		--top-module test_file_ops \
+		--Mdir obj_dir_vcs_file_ops \
+		-o test_file_ops
+	./obj_dir_vcs_file_ops/test_file_ops
+
+test_vcs_path_check:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		src/sv_pathlib_pkg.sv \
+		tests/test_path_check.sv \
+		tests/main_path_check.cpp \
+		--top-module test_path_check \
+		--Mdir obj_dir_vcs_path_check \
+		-o test_path_check
+	./obj_dir_vcs_path_check/test_path_check
+
+test_vcs_getenv:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		src/sv_pathlib_pkg.sv \
+		tests/test_getenv.sv \
+		tests/main_getenv.cpp \
+		--top-module test_getenv \
+		--Mdir obj_dir_vcs_getenv \
+		-o test_getenv
+	./obj_dir_vcs_getenv/test_getenv
+
+test_vcs_absolute:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		src/sv_pathlib_pkg.sv \
+		tests/test_absolute.sv \
+		tests/main_absolute.cpp \
+		--top-module test_absolute \
+		--Mdir obj_dir_vcs_absolute \
+		-o test_absolute
+	./obj_dir_vcs_absolute/test_absolute
+
+test_vcs_relative_to:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		src/sv_pathlib_pkg.sv \
+		tests/test_relative_to.sv \
+		tests/main_relative_to.cpp \
+		--top-module test_relative_to \
+		--Mdir obj_dir_vcs_relative_to \
+		-o test_relative_to
+	./obj_dir_vcs_relative_to/test_relative_to
+
+test_vcs_all: test_vcs_path_parse test_vcs_resolve test_vcs_stat test_vcs_cwd test_vcs_dir_ops test_vcs_file_io test_vcs_file_ops test_vcs_path_check test_vcs_getenv test_vcs_absolute test_vcs_relative_to
+	@echo "All VCS mode tests passed!"
+
+# DPI mode targets
+test_dpi_path_parse:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		+define+SV_PATHLIB_USE_DPI \
+		src/sv_pathlib_pkg.sv \
+		tests/test_path_parse.sv \
+		tests/main_path_parse.cpp \
+		src/dpi/sv_pathlib_dpi.cc \
+		--top-module test_path_parse \
+		--Mdir obj_dir_dpi_path_parse \
+		-o test_path_parse
+	./obj_dir_dpi_path_parse/test_path_parse
+
+test_dpi_resolve:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		+define+SV_PATHLIB_USE_DPI \
+		src/sv_pathlib_pkg.sv \
+		tests/test_resolve.sv \
+		tests/main_resolve.cpp \
+		src/dpi/sv_pathlib_dpi.cc \
+		--top-module test_resolve \
+		--Mdir obj_dir_dpi_resolve \
+		-o test_resolve
+	./obj_dir_dpi_resolve/test_resolve
+
+test_dpi_stat:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		+define+SV_PATHLIB_USE_DPI \
+		src/sv_pathlib_pkg.sv \
+		tests/test_stat.sv \
+		tests/main_stat.cpp \
+		src/dpi/sv_pathlib_dpi.cc \
+		--top-module test_stat \
+		--Mdir obj_dir_dpi_stat \
+		-o test_stat
+	./obj_dir_dpi_stat/test_stat
+
+test_dpi_cwd:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		+define+SV_PATHLIB_USE_DPI \
+		src/sv_pathlib_pkg.sv \
+		tests/test_cwd.sv \
+		tests/main_cwd.cpp \
+		src/dpi/sv_pathlib_dpi.cc \
+		--top-module test_cwd \
+		--Mdir obj_dir_dpi_cwd \
+		-o test_cwd
+	./obj_dir_dpi_cwd/test_cwd
+
+test_dpi_dir_ops:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		+define+SV_PATHLIB_USE_DPI \
+		src/sv_pathlib_pkg.sv \
+		tests/test_dir_ops.sv \
+		tests/main_dir_ops.cpp \
+		src/dpi/sv_pathlib_dpi.cc \
+		--top-module test_dir_ops \
+		--Mdir obj_dir_dpi_dir_ops \
+		-o test_dir_ops
+	./obj_dir_dpi_dir_ops/test_dir_ops
+
+test_dpi_file_io:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		+define+SV_PATHLIB_USE_DPI \
+		src/sv_pathlib_pkg.sv \
+		tests/test_file_io.sv \
+		tests/main_file_io.cpp \
+		src/dpi/sv_pathlib_dpi.cc \
+		--top-module test_file_io \
+		--Mdir obj_dir_dpi_file_io \
+		-o test_file_io
+	./obj_dir_dpi_file_io/test_file_io
+
+test_dpi_file_ops:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		+define+SV_PATHLIB_USE_DPI \
+		src/sv_pathlib_pkg.sv \
+		tests/test_file_ops.sv \
+		tests/main_file_ops.cpp \
+		src/dpi/sv_pathlib_dpi.cc \
+		--top-module test_file_ops \
+		--Mdir obj_dir_dpi_file_ops \
+		-o test_file_ops
+	./obj_dir_dpi_file_ops/test_file_ops
+
+test_dpi_glob:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		+define+SV_PATHLIB_USE_DPI \
+		src/sv_pathlib_pkg.sv \
+		tests/test_glob.sv \
+		tests/main_glob.cpp \
+		src/dpi/sv_pathlib_dpi.cc \
+		--top-module test_glob \
+		--Mdir obj_dir_dpi_glob \
+		-o test_glob
+	./obj_dir_dpi_glob/test_glob
+
+test_dpi_path_check:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		+define+SV_PATHLIB_USE_DPI \
+		src/sv_pathlib_pkg.sv \
+		tests/test_path_check.sv \
+		tests/main_path_check.cpp \
+		src/dpi/sv_pathlib_dpi.cc \
+		--top-module test_path_check \
+		--Mdir obj_dir_dpi_path_check \
+		-o test_path_check
+	./obj_dir_dpi_path_check/test_path_check
+
+test_dpi_getenv:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		+define+SV_PATHLIB_USE_DPI \
+		src/sv_pathlib_pkg.sv \
+		tests/test_getenv.sv \
+		tests/main_getenv.cpp \
+		src/dpi/sv_pathlib_dpi.cc \
+		--top-module test_getenv \
+		--Mdir obj_dir_dpi_getenv \
+		-o test_getenv
+	./obj_dir_dpi_getenv/test_getenv
+
+test_dpi_absolute:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		+define+SV_PATHLIB_USE_DPI \
+		src/sv_pathlib_pkg.sv \
+		tests/test_absolute.sv \
+		tests/main_absolute.cpp \
+		src/dpi/sv_pathlib_dpi.cc \
+		--top-module test_absolute \
+		--Mdir obj_dir_dpi_absolute \
+		-o test_absolute
+	./obj_dir_dpi_absolute/test_absolute
+
+test_dpi_relative_to:
+	$(VERILATOR) $(VERILATOR_FLAGS) \
+		+define+SV_PATHLIB_USE_DPI \
+		src/sv_pathlib_pkg.sv \
+		tests/test_relative_to.sv \
+		tests/main_relative_to.cpp \
+		src/dpi/sv_pathlib_dpi.cc \
+		--top-module test_relative_to \
+		--Mdir obj_dir_dpi_relative_to \
+		-o test_relative_to
+	./obj_dir_dpi_relative_to/test_relative_to
+
+test_dpi_all: test_dpi_path_parse test_dpi_resolve test_dpi_stat test_dpi_cwd test_dpi_dir_ops test_dpi_file_io test_dpi_file_ops test_dpi_glob test_dpi_path_check test_dpi_getenv test_dpi_absolute test_dpi_relative_to
+	@echo "All DPI mode tests passed!"
+
+test_all: test_vcs_all test_dpi_all
+	@echo "All tests passed!"
+
+test_clean:
+	rm -rf obj_dir_*
+
+clean: test_clean
+	rm -rf obj_dir* vcs_build/
