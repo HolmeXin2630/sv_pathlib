@@ -1,9 +1,12 @@
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <dirent.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <errno.h>
 
 extern "C" {
 
@@ -36,10 +39,29 @@ extern "C" {
     return S_ISREG(buf.st_mode) && buf.st_size == 0;
   }
 
+  // Recursive mkdir -p implementation
+  static int mkdir_p(const char* path, mode_t mode) {
+    char tmp[4096];
+    char* p = NULL;
+    size_t len;
+
+    snprintf(tmp, sizeof(tmp), "%s", path);
+    len = strlen(tmp);
+    if (tmp[len - 1] == '/') tmp[len - 1] = '\0';
+
+    for (p = tmp + 1; *p; p++) {
+      if (*p == '/') {
+        *p = '\0';
+        if (mkdir(tmp, mode) != 0 && errno != EEXIST) return -1;
+        *p = '/';
+      }
+    }
+    if (mkdir(tmp, mode) != 0 && errno != EEXIST) return -1;
+    return 0;
+  }
+
   int sv_pathlib_mkdir(const char* path) {
-    char cmd[1024];
-    snprintf(cmd, sizeof(cmd), "mkdir -p \"%s\"", path);
-    return system(cmd);
+    return mkdir_p(path, 0755);
   }
 
   int sv_pathlib_rmdir(const char* path) {
@@ -59,10 +81,28 @@ extern "C" {
   }
 
   void sv_pathlib_copy(const char* src, const char* dst) {
-    char cmd[2048];
-    snprintf(cmd, sizeof(cmd), "cp \"%s\" \"%s\"", src, dst);
-    int ret = system(cmd);
-    (void)ret;
+    int fd_in = open(src, O_RDONLY);
+    if (fd_in < 0) return;
+
+    struct stat st;
+    if (fstat(fd_in, &st) != 0) { close(fd_in); return; }
+
+    int fd_out = open(dst, O_WRONLY | O_CREAT | O_TRUNC, st.st_mode);
+    if (fd_out < 0) { close(fd_in); return; }
+
+    char buf[65536];
+    ssize_t n;
+    while ((n = read(fd_in, buf, sizeof(buf))) > 0) {
+      ssize_t written = 0;
+      while (written < n) {
+        ssize_t w = write(fd_out, buf + written, n - written);
+        if (w < 0) break;
+        written += w;
+      }
+    }
+
+    close(fd_in);
+    close(fd_out);
   }
 
   void sv_pathlib_rename(const char* old_path, const char* new_path) {
@@ -136,18 +176,20 @@ extern "C" {
     return getenv_buf;
   }
 
+  static char getcwd_buf[4096];
+
   int sv_pathlib_getcwd(char** result) {
-    char buf[4096];
-    if (!getcwd(buf, sizeof(buf))) return -1;
-    *result = strdup(buf);
+    if (!getcwd(getcwd_buf, sizeof(getcwd_buf))) return -1;
+    *result = getcwd_buf;
     return 0;
   }
+
+  static char relative_to_buf[4096];
 
   int sv_pathlib_relative_to(const char* path, const char* base, char** result) {
     char rpath[4096], rbase[4096];
     const char *pp, *bp;
     const char *p_next, *b_next;
-    char out[4096];
     int up_count = 0;
 
     if (!realpath(path, rpath) || !realpath(base, rbase))
@@ -174,18 +216,18 @@ extern "C" {
     }
 
     // Step 3: build result
-    out[0] = '\0';
+    relative_to_buf[0] = '\0';
     for (int i = 0; i < up_count; i++) {
-      if (i > 0) strcat(out, "/");
-      strcat(out, "..");
+      if (i > 0) strcat(relative_to_buf, "/");
+      strcat(relative_to_buf, "..");
     }
     if (*pp) {
-      if (out[0] != '\0') strcat(out, "/");
-      strcat(out, pp);
+      if (relative_to_buf[0] != '\0') strcat(relative_to_buf, "/");
+      strcat(relative_to_buf, pp);
     }
-    if (out[0] == '\0') strcpy(out, ".");
+    if (relative_to_buf[0] == '\0') strcpy(relative_to_buf, ".");
 
-    *result = strdup(out);
+    *result = relative_to_buf;
     return 0;
   }
 
