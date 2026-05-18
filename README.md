@@ -137,48 +137,34 @@ verilator --cc --exe --build -Isrc +define+SV_PATHLIB_USE_DPI \
 ### Requirements
 
 - [Verilator](https://www.veripool.org/verilator/) v5.020+ (pip install recommended: `pip install verilator`)
-- [VCS](https://www.synopsys.com/verification/simulation/vcs.html) (optional, for VCS simulator)
 - GCC/G++ (for DPI backend)
 
-### Simulator Selection
+### Build System
 
-Two Makefiles are provided for different simulators:
-
-| Makefile | Simulator | Usage |
-|----------|-----------|-------|
-| `Makefile.verilator` | Verilator | `make -f Makefile.verilator <target>` |
-| `Makefile.vcs` | VCS | `make -f Makefile.vcs <target>` |
-| `Makefile` | Both | `make <target>` (wrapper) |
+| Makefile | Usage |
+|----------|-------|
+| `Makefile` | `make <target>` (wrapper, recommended) |
+| `Makefile.verilator` | `make -f Makefile.verilator <target>` (direct) |
 
 ### Run All Tests
 
 ```bash
-make test_all                     # Run all tests on both simulators
-make test_verilator_all           # Run all tests on Verilator
-make test_vcs_all                 # Run all tests on VCS
-
-make test_verilator_vcs_all       # VCS backend mode on Verilator
-make test_verilator_dpi_all       # DPI backend mode on Verilator
-make test_vcs_vcs_all             # VCS backend mode on VCS
-make test_vcs_dpi_all             # DPI backend mode on VCS
+make test_all          # Run all tests (VCS backend + DPI backend)
+make test_vcs_all      # Run VCS backend mode tests ($system)
+make test_dpi_all      # Run DPI backend mode tests (DPI-C)
 ```
 
 ### Run Individual Tests
 
 ```bash
-# Verilator
 make -f Makefile.verilator test_vcs_path_parse   # VCS backend mode
 make -f Makefile.verilator test_dpi_glob          # DPI backend mode
-
-# VCS
-make -f Makefile.vcs test_vcs_path_parse          # VCS backend mode
-make -f Makefile.vcs test_dpi_glob                # DPI backend mode
 ```
 
 ### Clean Build Artifacts
 
 ```bash
-make test_clean    # Remove obj_dir_* build directories (both simulators)
+make test_clean    # Remove obj_dir_* build directories
 make clean         # Remove all build artifacts
 ```
 

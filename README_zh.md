@@ -137,48 +137,34 @@ verilator --cc --exe --build -Isrc +define+SV_PATHLIB_USE_DPI \
 ### 环境要求
 
 - [Verilator](https://www.veripool.org/verilator/) v5.020+（推荐 pip 安装：`pip install verilator`）
-- [VCS](https://www.synopsys.com/verification/simulation/vcs.html)（可选，用于 VCS 仿真器）
 - GCC/G++（DPI 后端需要）
 
-### 仿真器选择
+### 构建系统
 
-提供两个 Makefile 用于不同仿真器：
-
-| Makefile | 仿真器 | 用法 |
-|----------|--------|------|
-| `Makefile.verilator` | Verilator | `make -f Makefile.verilator <target>` |
-| `Makefile.vcs` | VCS | `make -f Makefile.vcs <target>` |
-| `Makefile` | 两者 | `make <target>`（wrapper） |
+| Makefile | 用法 |
+|----------|------|
+| `Makefile` | `make <target>`（wrapper，推荐） |
+| `Makefile.verilator` | `make -f Makefile.verilator <target>`（直接调用） |
 
 ### 运行全部测试
 
 ```bash
-make test_all                     # 在两个仿真器上运行全部测试
-make test_verilator_all           # 在 Verilator 上运行全部测试
-make test_vcs_all                 # 在 VCS 上运行全部测试
-
-make test_verilator_vcs_all       # VCS 后端模式 + Verilator 仿真器
-make test_verilator_dpi_all       # DPI 后端模式 + Verilator 仿真器
-make test_vcs_vcs_all             # VCS 后端模式 + VCS 仿真器
-make test_vcs_dpi_all             # DPI 后端模式 + VCS 仿真器
+make test_all          # 运行全部测试（VCS 后端 + DPI 后端）
+make test_vcs_all      # 运行 VCS 后端模式测试（$system）
+make test_dpi_all      # 运行 DPI 后端模式测试（DPI-C）
 ```
 
 ### 运行单个测试
 
 ```bash
-# Verilator
 make -f Makefile.verilator test_vcs_path_parse   # VCS 后端模式
 make -f Makefile.verilator test_dpi_glob          # DPI 后端模式
-
-# VCS
-make -f Makefile.vcs test_vcs_path_parse          # VCS 后端模式
-make -f Makefile.vcs test_dpi_glob                # DPI 后端模式
 ```
 
 ### 清理构建产物
 
 ```bash
-make test_clean    # 清除 obj_dir_* 构建目录（两个仿真器）
+make test_clean    # 清除 obj_dir_* 构建目录
 make clean         # 清除所有构建产物
 ```
 

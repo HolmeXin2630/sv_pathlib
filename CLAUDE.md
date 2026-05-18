@@ -11,13 +11,13 @@ sv_pathlib 是一个仿 Python `pathlib` 的 SystemVerilog 路径操作库，提
 依赖：Verilator (v5.020+, 推荐 pip 安装)，GCC/G++（DPI 后端需要）。
 
 ```bash
-make test_all          # 运行全部测试（VCS + DPI）
-make test_vcs_all      # 运行 VCS 模式测试
-make test_dpi_all      # 运行 DPI 模式测试
-make test_vcs_<name>   # 运行单个 VCS 测试
-make test_dpi_<name>   # 运行单个 DPI 测试
+make test_all          # 运行全部测试（VCS 后端 + DPI 后端）
+make test_vcs_all      # 运行 VCS 后端模式测试（$system）
+make test_dpi_all      # 运行 DPI 后端模式测试（DPI-C）
 make clean             # 清除所有 obj_dir* 构建目录
 ```
+
+单个测试通过 Makefile.verilator 运行：`make -f Makefile.verilator test_vcs_<name>` 或 `test_dpi_<name>`。
 
 测试用 `verilator --cc --exe --build` 编译并立即运行，无需单独的 lint 步骤。测试输出 `[PASS]`/`[FAIL]`，失败时以 `$finish(1)` 退出。
 
